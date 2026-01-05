@@ -169,7 +169,7 @@ export default function Export() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 p-4 space-y-4">
+      <div className="flex-1 p-4 pb-20 space-y-4">
         {/* Date range */}
         <div className="bg-white rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-800 mb-3">Date Range</h2>
@@ -252,7 +252,7 @@ export default function Export() {
       </div>
 
       {/* Bottom navigation */}
-      <nav className="bg-white border-t border-gray-200 p-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2">
         <div className="flex justify-around">
           <button
             onClick={() => navigate('/dashboard')}

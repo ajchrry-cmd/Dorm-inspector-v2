@@ -81,7 +81,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 p-4 space-y-4">
+      <main className="flex-1 p-4 pb-20 space-y-4">
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-lg shadow p-4">
@@ -168,7 +168,7 @@ export default function Dashboard() {
       </main>
 
       {/* Bottom navigation */}
-      <nav className="bg-white border-t border-gray-200 p-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2">
         <div className="flex justify-around">
           <button
             onClick={() => navigate('/dashboard')}

@@ -104,7 +104,7 @@ export default function RoomQueue() {
       </div>
 
       {/* Room grid */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-4 pb-20 overflow-auto">
         <div className="grid grid-cols-5 gap-2">
           {currentFloorRooms.map((room) => {
             const isQueued = queuedRooms.has(room);
@@ -128,7 +128,7 @@ export default function RoomQueue() {
       </div>
 
       {/* Bottom navigation */}
-      <nav className="bg-white border-t border-gray-200 p-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2">
         <div className="flex justify-around">
           <button
             onClick={() => navigate('/dashboard')}
