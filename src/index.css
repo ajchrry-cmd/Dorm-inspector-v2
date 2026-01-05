@@ -10,3 +10,40 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Text size settings */
+.text-size-small {
+  font-size: 14px;
+}
+
+.text-size-medium {
+  font-size: 16px;
+}
+
+.text-size-large {
+  font-size: 20px;
+}
+
+/* High contrast mode */
+.high-contrast {
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --bg-primary: #ffffff;
+  --border-color: #000000;
+}
+
+.high-contrast .bg-gray-100 {
+  background-color: #ffffff !important;
+}
+
+.high-contrast .text-gray-500 {
+  color: #333333 !important;
+}
+
+.high-contrast .text-gray-600 {
+  color: #222222 !important;
+}
+
+.high-contrast .border-gray-200 {
+  border-color: #000000 !important;
+}
