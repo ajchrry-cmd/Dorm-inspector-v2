@@ -1,16 +1,35 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { currentInspector, roomQueue, inspections } = useAppState();
+  const [headerClicks, setHeaderClicks] = useState(0);
+  const clickTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!currentInspector) {
       navigate('/');
     }
   }, [currentInspector, navigate]);
+
+  useEffect(() => {
+    if (headerClicks >= 5) {
+      navigate('/admin');
+      setHeaderClicks(0);
+    }
+  }, [headerClicks, navigate]);
+
+  const handleHeaderClick = () => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    setHeaderClicks((prev) => prev + 1);
+    clickTimeoutRef.current = window.setTimeout(() => {
+      setHeaderClicks(0);
+    }, 2000);
+  };
 
   if (!currentInspector) return null;
 
@@ -31,14 +50,14 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-blue-600 text-white p-4 shadow">
+      <header className="bg-blue-600 text-white p-4 shadow" onClick={handleHeaderClick}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold">Barracks Inspection</h1>
             <p className="text-sm text-blue-100">{currentInspector.name}</p>
           </div>
           <button
-            onClick={() => navigate('/')}
+            onClick={(e) => { e.stopPropagation(); navigate('/'); }}
             className="text-sm text-blue-100 hover:text-white"
           >
             Switch
