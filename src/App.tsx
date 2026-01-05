@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './hooks/useAppState';
 import InspectorSelect from './pages/InspectorSelect';
 import Dashboard from './pages/Dashboard';
@@ -13,7 +13,7 @@ import './App.css';
 function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <HashRouter>
         <div className="min-h-full bg-gray-100">
           <Routes>
             <Route path="/" element={<InspectorSelect />} />
@@ -27,7 +27,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </AppProvider>
   );
 }
