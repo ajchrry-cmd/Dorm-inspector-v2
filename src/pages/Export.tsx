@@ -16,8 +16,10 @@ export default function Export() {
   const [exportType, setExportType] = useState<'detailed' | 'summary'>('detailed');
 
   const handleExport = () => {
-    const start = startOfDay(new Date(startDate));
-    const end = endOfDay(new Date(endDate));
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const start = startOfDay(new Date(startYear, startMonth - 1, startDay));
+    const end = endOfDay(new Date(endYear, endMonth - 1, endDay));
     const inspections = getInspectionsByDateRange(start, end);
 
     if (inspections.length === 0) {
@@ -145,8 +147,10 @@ export default function Export() {
   };
 
   const previewCount = () => {
-    const start = startOfDay(new Date(startDate));
-    const end = endOfDay(new Date(endDate));
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const start = startOfDay(new Date(startYear, startMonth - 1, startDay));
+    const end = endOfDay(new Date(endYear, endMonth - 1, endDay));
     return getInspectionsByDateRange(start, end).length;
   };
 
