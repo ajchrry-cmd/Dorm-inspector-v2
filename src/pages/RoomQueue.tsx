@@ -30,7 +30,7 @@ export default function RoomQueue() {
   };
 
   return (
-    <div className="min-h-full flex flex-col bg-gray-100">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header */}
       <header className="bg-blue-600 text-white p-4 shadow">
         <div className="flex items-center">

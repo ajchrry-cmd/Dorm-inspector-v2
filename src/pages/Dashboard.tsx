@@ -29,7 +29,7 @@ export default function Dashboard() {
   ) || [];
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-blue-600 text-white p-4 shadow">
         <div className="flex items-center justify-between">
