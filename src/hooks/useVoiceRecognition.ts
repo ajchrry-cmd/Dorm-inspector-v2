@@ -64,21 +64,26 @@ export function useVoiceRecognition(
     };
   }, []);
 
-  const matchDemerit = useCallback((text: string): { demerit: string; type: 'auto-fail' | 'regular' } | null => {
+  const matchDemerits = useCallback((text: string): { demerit: string; type: 'auto-fail' | 'regular' }[] => {
     const lower = text.toLowerCase().trim();
+    const matches: { demerit: string; type: 'auto-fail' | 'regular' }[] = [];
+    const matchedDemerits = new Set<string>();
 
     for (const entry of DEMERIT_KEYWORDS) {
+      if (matchedDemerits.has(entry.demerit)) continue;
       for (const keyword of entry.keywords) {
         if (lower.includes(keyword)) {
           const isAutoFail = AUTO_FAIL_DEMERITS.includes(entry.demerit as AutoFailDemerit);
-          return {
+          matches.push({
             demerit: entry.demerit,
             type: isAutoFail ? 'auto-fail' : 'regular',
-          };
+          });
+          matchedDemerits.add(entry.demerit);
+          break; // Move to next demerit entry once matched
         }
       }
     }
-    return null;
+    return matches;
   }, []);
 
   const startListening = useCallback(() => {
@@ -91,7 +96,7 @@ export function useVoiceRecognition(
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    const processedPhrases = new Set<string>();
+    const detectedDemerits = new Set<string>();
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -115,18 +120,19 @@ export function useVoiceRecognition(
 
       setTranscript(interimTranscript || finalTranscript);
 
-      // Only process final results to avoid duplicate matches
+      // Process final results - detect all demerits in the phrase
       if (finalTranscript) {
-        const phraseKey = finalTranscript.toLowerCase().trim();
-        if (!processedPhrases.has(phraseKey)) {
-          processedPhrases.add(phraseKey);
-          const match = matchDemerit(finalTranscript);
-          if (match) {
-            setLastMatch(match.demerit);
+        const matches = matchDemerits(finalTranscript);
+        const newMatches = matches.filter(m => !detectedDemerits.has(m.demerit));
+
+        if (newMatches.length > 0) {
+          for (const match of newMatches) {
+            detectedDemerits.add(match.demerit);
             onDemeritDetected(match.demerit, match.type);
-            // Clear match indicator after a delay
-            setTimeout(() => setLastMatch(null), 2000);
           }
+          const matchNames = newMatches.map(m => m.demerit).join(', ');
+          setLastMatch(matchNames);
+          setTimeout(() => setLastMatch(null), 2000);
         }
       }
     };
@@ -160,7 +166,7 @@ export function useVoiceRecognition(
     } catch {
       setIsListening(false);
     }
-  }, [isSupported, matchDemerit, onDemeritDetected]);
+  }, [isSupported, matchDemerits, onDemeritDetected]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
