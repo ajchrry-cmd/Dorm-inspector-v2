@@ -84,48 +84,85 @@ export default function Dashboard() {
       <main className="flex-1 p-4 pb-20 space-y-4">
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-blue-600">
-              {todayInspections.length}
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {todayInspections.length}
+                </div>
+                <div className="text-sm text-gray-500">Inspected Today</div>
+              </div>
+              <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">Inspected Today</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-orange-500">
-              {roomsToInspect.length}
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-orange-500">
+                  {roomsToInspect.length}
+                </div>
+                <div className="text-sm text-gray-500">Remaining</div>
+              </div>
+              <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">Remaining</div>
           </div>
         </div>
 
         {/* List selector */}
-        {roomLists.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <label className="text-sm font-medium text-gray-700 block mb-2">
-              Inspection List
-            </label>
-            <select
-              value={activeRoomListId || ''}
-              onChange={(e) => setActiveRoomListId(e.target.value || null)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
-            >
-              <option value="">-- Select a list --</option>
-              {roomLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name} ({list.rooms.length} rooms)
-                </option>
-              ))}
-            </select>
+        <div className="bg-white rounded-lg shadow border-l-4 border-indigo-400">
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <label className="text-sm font-semibold text-gray-700">
+                Inspection List
+              </label>
+            </div>
+            {roomLists.length > 0 ? (
+              <select
+                value={activeRoomListId || ''}
+                onChange={(e) => setActiveRoomListId(e.target.value || null)}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
+              >
+                <option value="">-- Select a list --</option>
+                {roomLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name} ({list.rooms.length} rooms)
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <button
+                onClick={() => navigate('/queue')}
+                className="w-full p-3 border border-dashed border-gray-300 rounded-lg text-gray-500 text-sm"
+              >
+                No lists yet — tap to create one
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Room queue */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">Rooms to Inspect</h2>
+        {/* Rooms to inspect */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <h2 className="font-semibold text-blue-800 text-sm">Rooms to Inspect</h2>
+            </div>
             <button
               onClick={() => navigate('/queue')}
-              className="text-sm text-blue-600"
+              className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded"
             >
               Manage
             </button>
@@ -147,8 +184,13 @@ export default function Dashboard() {
                   onClick={() => navigate(`/inspect/${room}`)}
                   className={`w-full ${listPadding} text-left hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between`}
                 >
-                  <span className="font-medium">Room {room}</span>
-                  <span className="text-blue-600">Inspect →</span>
+                  <span className="font-medium text-gray-800">Room {room}</span>
+                  <span className="text-blue-600 text-sm font-medium flex items-center gap-1">
+                    Inspect
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
                 </button>
               ))}
               {roomsToInspect.length > 10 && (
@@ -162,9 +204,12 @@ export default function Dashboard() {
 
         {/* Today's completed */}
         {todayInspections.length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-800">Completed Today</h2>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-4 py-3 bg-green-50 border-b border-green-100 flex items-center gap-2">
+              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <h2 className="font-semibold text-green-800 text-sm">Completed Today</h2>
             </div>
             <div className="divide-y divide-gray-100">
               {todayInspections.slice(0, 5).map((inspection) => (
@@ -173,10 +218,12 @@ export default function Dashboard() {
                   onClick={() => navigate(`/history/${inspection.id}`)}
                   className={`w-full ${listPadding} text-left hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between`}
                 >
-                  <span className="font-medium">Room {inspection.roomNumber}</span>
+                  <span className="font-medium text-gray-800">Room {inspection.roomNumber}</span>
                   <span
-                    className={`text-sm font-medium ${
-                      inspection.passed ? 'text-green-600' : 'text-red-600'
+                    className={`text-xs font-bold px-2 py-0.5 rounded ${
+                      inspection.passed
+                        ? 'text-green-700 bg-green-100'
+                        : 'text-red-700 bg-red-100'
                     }`}
                   >
                     {inspection.passed ? 'PASS' : 'FAIL'}

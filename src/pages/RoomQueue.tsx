@@ -289,11 +289,23 @@ export default function RoomQueue() {
         {/* Room lists */}
         {roomLists.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-            <p>No room lists yet.</p>
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p className="font-medium text-gray-600">No room lists yet</p>
             <p className="text-sm mt-1">Create a list to organize rooms for inspection.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Your Lists ({roomLists.length})
+              </span>
+            </div>
+            <div className="divide-y divide-gray-100">
             {roomLists.map((list) => (
               <div key={list.id} className="p-4">
                 {editingListId === list.id ? (
@@ -325,7 +337,7 @@ export default function RoomQueue() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-800">{list.name}</span>
                         {activeRoomListId === list.id && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
                             Active
                           </span>
                         )}
@@ -361,6 +373,7 @@ export default function RoomQueue() {
                 )}
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>

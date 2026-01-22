@@ -8,7 +8,7 @@ import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types'
 export default function InspectionForm() {
   const navigate = useNavigate();
   const { roomNumber } = useParams<{ roomNumber: string }>();
-  const { currentInspector, addInspection } = useAppState();
+  const { currentInspector, addInspection, activeRoomListId, removeRoomFromList } = useAppState();
   const { showToast } = useToast();
 
   const [autoFailDemerits, setAutoFailDemerits] = useState<AutoFailDemerit[]>([]);
@@ -45,6 +45,9 @@ export default function InspectionForm() {
 
   const handleSubmit = () => {
     addInspection(room, autoFailDemerits, regularDemerits, notes);
+    if (activeRoomListId) {
+      removeRoomFromList(activeRoomListId, room);
+    }
     showToast(`Room ${room} - ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
     navigate('/dashboard');
   };
@@ -80,10 +83,15 @@ export default function InspectionForm() {
       {/* Form content */}
       <div className="flex-1 overflow-auto">
         {/* Auto-fail demerits */}
-        <div className="bg-white mb-2">
+        <div className="bg-white mb-2 border-l-4 border-red-500">
           <div className="p-4 border-b border-gray-200 bg-red-50">
-            <h2 className="font-semibold text-red-800">Auto-Fail Demerits</h2>
-            <p className="text-xs text-red-600">Any checked = automatic failure</p>
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="font-semibold text-red-800">Auto-Fail Demerits</h2>
+            </div>
+            <p className="text-xs text-red-600 mt-1 ml-6">Any checked = automatic failure</p>
           </div>
           <div className="divide-y divide-gray-100">
             {AUTO_FAIL_DEMERITS.map((demerit) => (
@@ -104,10 +112,15 @@ export default function InspectionForm() {
         </div>
 
         {/* Regular demerits */}
-        <div className="bg-white mb-2">
+        <div className="bg-white mb-2 border-l-4 border-orange-400">
           <div className="p-4 border-b border-gray-200 bg-orange-50">
-            <h2 className="font-semibold text-orange-800">Regular Demerits</h2>
-            <p className="text-xs text-orange-600">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h2 className="font-semibold text-orange-800">Regular Demerits</h2>
+            </div>
+            <p className="text-xs text-orange-600 mt-1 ml-6">
               {regularDemerits.length}/3 allowed ({regularDemerits.length > 3 ? 'OVER LIMIT' : `${3 - regularDemerits.length} remaining`})
             </p>
           </div>
@@ -130,14 +143,21 @@ export default function InspectionForm() {
         </div>
 
         {/* Notes */}
-        <div className="bg-white mb-2 p-4">
-          <h2 className="font-semibold text-gray-800 mb-2">Notes</h2>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add any additional notes..."
-            className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24"
-          />
+        <div className="bg-white mb-2 border-l-4 border-gray-300">
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <h2 className="font-semibold text-gray-700">Notes</h2>
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes..."
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24"
+            />
+          </div>
         </div>
       </div>
 
