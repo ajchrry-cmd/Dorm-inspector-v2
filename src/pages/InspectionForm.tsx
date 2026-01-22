@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
 import { useToast } from '../hooks/useToast';
+import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import type { AutoFailDemerit, RegularDemerit } from '../types';
 import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types';
 
@@ -16,11 +17,32 @@ export default function InspectionForm() {
   const [notes, setNotes] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const handleDemeritDetected = useCallback((demerit: string, type: 'auto-fail' | 'regular') => {
+    if (type === 'auto-fail') {
+      setAutoFailDemerits((prev) =>
+        prev.includes(demerit as AutoFailDemerit) ? prev : [...prev, demerit as AutoFailDemerit]
+      );
+    } else {
+      setRegularDemerits((prev) =>
+        prev.includes(demerit as RegularDemerit) ? prev : [...prev, demerit as RegularDemerit]
+      );
+    }
+    showToast(`Added: ${demerit}`, type === 'auto-fail' ? 'error' : 'warning');
+  }, [showToast]);
+
+  const { isListening, isSupported, transcript, lastMatch, startListening, stopListening } =
+    useVoiceRecognition(handleDemeritDetected);
+
   useEffect(() => {
     if (!currentInspector) {
       navigate('/');
     }
   }, [currentInspector, navigate]);
+
+  // Stop listening on unmount
+  useEffect(() => {
+    return () => { stopListening(); };
+  }, [stopListening]);
 
   if (!currentInspector || !roomNumber) return null;
 
@@ -161,8 +183,41 @@ export default function InspectionForm() {
         </div>
       </div>
 
-      {/* Submit button */}
+      {/* Voice recognition feedback */}
+      {isListening && (
+        <div className="bg-purple-50 border-t border-purple-200 px-4 py-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-sm font-medium text-purple-800">Listening...</span>
+            {lastMatch && (
+              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded ml-auto">
+                Matched: {lastMatch}
+              </span>
+            )}
+          </div>
+          {transcript && (
+            <p className="text-xs text-purple-600 italic truncate">"{transcript}"</p>
+          )}
+        </div>
+      )}
+
+      {/* Submit area with voice button */}
       <div className="p-4 bg-white border-t border-gray-200">
+        {isSupported && (
+          <button
+            onClick={isListening ? stopListening : startListening}
+            className={`w-full mb-3 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+              isListening
+                ? 'bg-red-100 text-red-700 border border-red-300'
+                : 'bg-purple-100 text-purple-700 border border-purple-300'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            {isListening ? 'Stop Voice Input' : 'Voice Input'}
+          </button>
+        )}
         <button
           onClick={() => setShowConfirm(true)}
           className={`w-full py-4 rounded-lg font-bold text-white ${
