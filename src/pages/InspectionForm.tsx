@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useToast } from '../hooks/useToast';
 import type { AutoFailDemerit, RegularDemerit } from '../types';
 import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types';
 
@@ -8,6 +9,7 @@ export default function InspectionForm() {
   const navigate = useNavigate();
   const { roomNumber } = useParams<{ roomNumber: string }>();
   const { currentInspector, addInspection } = useAppState();
+  const { showToast } = useToast();
 
   const [autoFailDemerits, setAutoFailDemerits] = useState<AutoFailDemerit[]>([]);
   const [regularDemerits, setRegularDemerits] = useState<RegularDemerit[]>([]);
@@ -43,6 +45,7 @@ export default function InspectionForm() {
 
   const handleSubmit = () => {
     addInspection(room, autoFailDemerits, regularDemerits, notes);
+    showToast(`Room ${room} - ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
     navigate('/dashboard');
   };
 

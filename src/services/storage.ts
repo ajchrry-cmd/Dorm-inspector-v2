@@ -212,6 +212,17 @@ export function deleteInspection(id: string): void {
   saveState(state);
 }
 
+export function restoreInspection(inspection: Inspection): void {
+  const state = getState();
+  // Check if inspection doesn't already exist
+  if (!state.inspections.find((i) => i.id === inspection.id)) {
+    state.inspections.push(inspection);
+    // Sort by date to maintain order
+    state.inspections.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    saveState(state);
+  }
+}
+
 // Helper function to get Monday of current week
 function getMonday(date: Date): Date {
   const d = new Date(date);

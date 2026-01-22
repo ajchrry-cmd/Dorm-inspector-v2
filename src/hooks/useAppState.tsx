@@ -35,6 +35,7 @@ interface AppContextType {
   ) => Inspection | null;
   updateInspection: (id: string, updates: Partial<Inspection>) => void;
   deleteInspection: (id: string) => void;
+  restoreInspection: (inspection: Inspection) => void;
   getInspectionsByDateRange: (startDate: Date, endDate: Date) => Inspection[];
 
   // Analytics
@@ -143,6 +144,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return storage.getInspectorStats(inspectorId);
   }, []);
 
+  const restoreInspection = useCallback((inspection: Inspection) => {
+    storage.restoreInspection(inspection);
+    setInspections(storage.getInspections());
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -161,6 +167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addInspection,
         updateInspection,
         deleteInspection,
+        restoreInspection,
         getInspectionsByDateRange,
         getInspectorStats,
         refreshState,

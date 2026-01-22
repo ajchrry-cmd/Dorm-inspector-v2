@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useToast } from '../hooks/useToast';
 import type { AutoFailDemerit, RegularDemerit, Inspection } from '../types';
 import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types';
 import { format } from 'date-fns';
@@ -8,7 +9,9 @@ import { format } from 'date-fns';
 export default function EditInspection() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { inspections, updateInspection, deleteInspection } = useAppState();
+  const { inspections, updateInspection, deleteInspection, restoreInspection } = useAppState();
+  const { showToast } = useToast();
+  const deletedInspectionRef = useRef<Inspection | null>(null);
 
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [autoFailDemerits, setAutoFailDemerits] = useState<AutoFailDemerit[]>([]);
@@ -62,6 +65,7 @@ export default function EditInspection() {
       notes,
     });
     setIsEditing(false);
+    showToast('Changes saved', 'success');
   };
 
   const handleCancel = () => {
@@ -72,8 +76,18 @@ export default function EditInspection() {
   };
 
   const handleDelete = () => {
+    deletedInspectionRef.current = inspection;
     deleteInspection(inspection.id);
     navigate('/history');
+    showToast(`Room ${inspection.roomNumber} inspection deleted`, 'info', {
+      label: 'Undo',
+      onClick: () => {
+        if (deletedInspectionRef.current) {
+          restoreInspection(deletedInspectionRef.current);
+          deletedInspectionRef.current = null;
+        }
+      },
+    });
   };
 
   return (

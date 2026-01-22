@@ -182,8 +182,14 @@ export default function Admin() {
 
             {/* Inspector comparison */}
             <div className="bg-white rounded-lg shadow">
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 className="font-semibold text-gray-800">Inspector Comparison</h2>
+                <button
+                  onClick={() => navigate('/admin/compare')}
+                  className="text-sm text-blue-600 font-medium"
+                >
+                  Detailed View →
+                </button>
               </div>
               {stats.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">No data available</div>

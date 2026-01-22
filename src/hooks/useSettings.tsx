@@ -4,12 +4,14 @@ export interface AppSettings {
   textSize: 'small' | 'medium' | 'large';
   compactMode: boolean;
   highContrast: boolean;
+  darkMode: boolean;
 }
 
 const defaultSettings: AppSettings = {
   textSize: 'medium',
   compactMode: false,
   highContrast: false,
+  darkMode: false,
 };
 
 const SETTINGS_KEY = 'barracks-inspection-settings';
@@ -43,7 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [settings]);
 
-  // Apply text size to document
+  // Apply settings to document
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('text-size-small', 'text-size-medium', 'text-size-large');
@@ -54,7 +56,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove('high-contrast');
     }
-  }, [settings.textSize, settings.highContrast]);
+
+    if (settings.darkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.textSize, settings.highContrast, settings.darkMode]);
 
   const updateSettings = (updates: Partial<AppSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
