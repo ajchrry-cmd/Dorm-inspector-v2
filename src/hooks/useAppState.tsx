@@ -3,6 +3,7 @@ import type {
   Inspector,
   Inspection,
   RoomQueue,
+  RoomList,
   AutoFailDemerit,
   RegularDemerit,
 } from '../types';
@@ -18,12 +19,23 @@ interface AppContextType {
   updateInspector: (id: string, updates: Partial<Inspector>) => void;
   removeInspector: (id: string) => void;
 
-  // Room Queue
+  // Room Queue (legacy)
   roomQueue: RoomQueue | null;
   addRoomToQueue: (room: number) => void;
   removeRoomFromQueue: (room: number) => void;
   setRoomQueue: (weekOf: string, rooms: number[]) => void;
   clearRoomQueue: () => void;
+
+  // Room Lists
+  roomLists: RoomList[];
+  activeRoomListId: string | null;
+  activeRoomList: RoomList | null;
+  setActiveRoomListId: (id: string | null) => void;
+  addRoomList: (name: string, rooms?: number[]) => RoomList;
+  updateRoomList: (id: string, updates: Partial<Omit<RoomList, 'id' | 'createdAt'>>) => void;
+  deleteRoomList: (id: string) => void;
+  addRoomToList: (listId: string, room: number) => void;
+  removeRoomFromList: (listId: string, room: number) => void;
 
   // Inspections
   inspections: Inspection[];
@@ -51,12 +63,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [currentInspector, setCurrentInspectorState] = useState<Inspector | null>(null);
   const [roomQueue, setRoomQueueState] = useState<RoomQueue | null>(null);
+  const [roomLists, setRoomLists] = useState<RoomList[]>([]);
+  const [activeRoomListId, setActiveRoomListIdState] = useState<string | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
 
   const refreshState = useCallback(() => {
     setInspectors(storage.getInspectors());
     setCurrentInspectorState(storage.getCurrentInspector());
     setRoomQueueState(storage.getRoomQueue());
+    setRoomLists(storage.getRoomLists());
+    setActiveRoomListIdState(storage.getActiveRoomListId());
     setInspections(storage.getInspections());
   }, []);
 
@@ -102,6 +118,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clearRoomQueue = useCallback(() => {
     storage.clearRoomQueue();
     setRoomQueueState(null);
+  }, []);
+
+  // Room list operations
+  const activeRoomList = roomLists.find((l) => l.id === activeRoomListId) || null;
+
+  const setActiveRoomListId = useCallback((id: string | null) => {
+    storage.setActiveRoomListId(id);
+    setActiveRoomListIdState(id);
+  }, []);
+
+  const addRoomList = useCallback((name: string, rooms: number[] = []) => {
+    const list = storage.addRoomList(name, rooms);
+    setRoomLists(storage.getRoomLists());
+    return list;
+  }, []);
+
+  const updateRoomList = useCallback((id: string, updates: Partial<Omit<RoomList, 'id' | 'createdAt'>>) => {
+    storage.updateRoomList(id, updates);
+    setRoomLists(storage.getRoomLists());
+  }, []);
+
+  const deleteRoomList = useCallback((id: string) => {
+    storage.deleteRoomList(id);
+    setRoomLists(storage.getRoomLists());
+    if (activeRoomListId === id) {
+      setActiveRoomListIdState(null);
+    }
+  }, [activeRoomListId]);
+
+  const addRoomToList = useCallback((listId: string, room: number) => {
+    storage.addRoomToList(listId, room);
+    setRoomLists(storage.getRoomLists());
+  }, []);
+
+  const removeRoomFromList = useCallback((listId: string, room: number) => {
+    storage.removeRoomFromList(listId, room);
+    setRoomLists(storage.getRoomLists());
   }, []);
 
   const addInspection = useCallback(
@@ -163,6 +216,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         removeRoomFromQueue,
         setRoomQueue,
         clearRoomQueue,
+        roomLists,
+        activeRoomListId,
+        activeRoomList,
+        setActiveRoomListId,
+        addRoomList,
+        updateRoomList,
+        deleteRoomList,
+        addRoomToList,
+        removeRoomFromList,
         inspections,
         addInspection,
         updateInspection,

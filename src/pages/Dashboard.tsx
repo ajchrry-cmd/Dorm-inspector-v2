@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { currentInspector, roomQueue, inspections } = useAppState();
+  const { currentInspector, roomLists, activeRoomListId, activeRoomList, setActiveRoomListId, inspections } = useAppState();
   const { settings } = useSettings();
   const [headerClicks, setHeaderClicks] = useState(0);
   const clickTimeoutRef = useRef<number | null>(null);
@@ -44,9 +44,9 @@ export default function Dashboard() {
       new Date(i.date).toDateString() === today
   );
 
-  // Rooms still needing inspection today
+  // Rooms still needing inspection today (from active list)
   const inspectedRoomsToday = new Set(todayInspections.map((i) => i.roomNumber));
-  const roomsToInspect = roomQueue?.rooms.filter(
+  const roomsToInspect = activeRoomList?.rooms.filter(
     (r) => !inspectedRoomsToday.has(r)
   ) || [];
 
@@ -98,6 +98,27 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* List selector */}
+        {roomLists.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Inspection List
+            </label>
+            <select
+              value={activeRoomListId || ''}
+              onChange={(e) => setActiveRoomListId(e.target.value || null)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
+            >
+              <option value="">-- Select a list --</option>
+              {roomLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} ({list.rooms.length} rooms)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Room queue */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -112,10 +133,10 @@ export default function Dashboard() {
 
           {roomsToInspect.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {roomQueue?.rooms.length === 0 || !roomQueue ? (
-                <p>No rooms in queue. Add rooms to start inspecting.</p>
+              {!activeRoomList || activeRoomList.rooms.length === 0 ? (
+                <p>No rooms in list. {roomLists.length === 0 ? 'Create a list' : 'Select a list'} to start inspecting.</p>
               ) : (
-                <p>All queued rooms have been inspected today!</p>
+                <p>All rooms in this list have been inspected today!</p>
               )}
             </div>
           ) : (

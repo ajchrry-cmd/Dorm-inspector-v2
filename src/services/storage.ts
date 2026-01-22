@@ -3,6 +3,7 @@ import type {
   Inspector,
   Inspection,
   RoomQueue,
+  RoomList,
   AutoFailDemerit,
   RegularDemerit,
 } from '../types';
@@ -15,6 +16,8 @@ const defaultState: AppState = {
   inspectors: [],
   inspections: [],
   roomQueue: null,
+  roomLists: [],
+  activeRoomListId: null,
   currentInspectorId: null,
 };
 
@@ -128,6 +131,79 @@ export function clearRoomQueue(): void {
   const state = getState();
   state.roomQueue = null;
   saveState(state);
+}
+
+// Room list operations
+export function getRoomLists(): RoomList[] {
+  return getState().roomLists || [];
+}
+
+export function getActiveRoomListId(): string | null {
+  return getState().activeRoomListId || null;
+}
+
+export function setActiveRoomListId(id: string | null): void {
+  const state = getState();
+  state.activeRoomListId = id;
+  saveState(state);
+}
+
+export function addRoomList(name: string, rooms: number[] = []): RoomList {
+  const state = getState();
+  if (!state.roomLists) state.roomLists = [];
+  const roomList: RoomList = {
+    id: generateId(),
+    name,
+    rooms: [...rooms].sort((a, b) => a - b),
+    createdAt: new Date().toISOString(),
+  };
+  state.roomLists.push(roomList);
+  saveState(state);
+  return roomList;
+}
+
+export function updateRoomList(id: string, updates: Partial<Omit<RoomList, 'id' | 'createdAt'>>): void {
+  const state = getState();
+  if (!state.roomLists) return;
+  const index = state.roomLists.findIndex((l) => l.id === id);
+  if (index !== -1) {
+    state.roomLists[index] = { ...state.roomLists[index], ...updates };
+    if (updates.rooms) {
+      state.roomLists[index].rooms = [...updates.rooms].sort((a, b) => a - b);
+    }
+    saveState(state);
+  }
+}
+
+export function deleteRoomList(id: string): void {
+  const state = getState();
+  if (!state.roomLists) return;
+  state.roomLists = state.roomLists.filter((l) => l.id !== id);
+  if (state.activeRoomListId === id) {
+    state.activeRoomListId = null;
+  }
+  saveState(state);
+}
+
+export function addRoomToList(listId: string, room: number): void {
+  const state = getState();
+  if (!state.roomLists) return;
+  const list = state.roomLists.find((l) => l.id === listId);
+  if (list && !list.rooms.includes(room)) {
+    list.rooms.push(room);
+    list.rooms.sort((a, b) => a - b);
+    saveState(state);
+  }
+}
+
+export function removeRoomFromList(listId: string, room: number): void {
+  const state = getState();
+  if (!state.roomLists) return;
+  const list = state.roomLists.find((l) => l.id === listId);
+  if (list) {
+    list.rooms = list.rooms.filter((r) => r !== room);
+    saveState(state);
+  }
 }
 
 // Inspection operations

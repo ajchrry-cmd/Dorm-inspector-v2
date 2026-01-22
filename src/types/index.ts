@@ -55,11 +55,21 @@ export interface RoomQueue {
   rooms: number[];
 }
 
+// Named room list
+export interface RoomList {
+  id: string;
+  name: string;
+  rooms: number[];
+  createdAt: string;
+}
+
 // App state stored in localStorage
 export interface AppState {
   inspectors: Inspector[];
   inspections: Inspection[];
   roomQueue: RoomQueue | null;
+  roomLists: RoomList[];
+  activeRoomListId: string | null;
   currentInspectorId: string | null;
 }
 
