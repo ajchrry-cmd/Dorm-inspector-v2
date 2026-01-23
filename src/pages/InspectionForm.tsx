@@ -77,8 +77,8 @@ export default function InspectionForm() {
   return (
     <div className="min-h-full flex flex-col bg-gray-100">
       {/* Header */}
-      <header className="bg-blue-600 text-white p-4 shadow">
-        <div className="flex items-center">
+      <header className="bg-blue-600 text-white p-4 md:px-8 shadow">
+        <div className="flex items-center max-w-4xl mx-auto">
           <button onClick={() => navigate('/dashboard')} className="mr-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -103,9 +103,10 @@ export default function InspectionForm() {
       </div>
 
       {/* Form content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto md:px-8 md:py-4">
+        <div className="md:max-w-4xl md:mx-auto md:grid md:grid-cols-2 md:gap-4">
         {/* Auto-fail demerits */}
-        <div className="bg-white mb-2 border-l-4 border-red-500">
+        <div className="bg-white mb-2 md:mb-0 border-l-4 border-red-500 md:rounded-lg md:shadow">
           <div className="p-4 border-b border-gray-200 bg-red-50">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +135,7 @@ export default function InspectionForm() {
         </div>
 
         {/* Regular demerits */}
-        <div className="bg-white mb-2 border-l-4 border-orange-400">
+        <div className="bg-white mb-2 md:mb-0 border-l-4 border-orange-400 md:rounded-lg md:shadow">
           <div className="p-4 border-b border-gray-200 bg-orange-50">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,8 +165,9 @@ export default function InspectionForm() {
           </div>
         </div>
 
+        </div>
         {/* Notes */}
-        <div className="bg-white mb-2 border-l-4 border-gray-300">
+        <div className="bg-white mb-2 border-l-4 border-gray-300 md:max-w-4xl md:mx-auto md:rounded-lg md:shadow md:mt-4">
           <div className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +187,7 @@ export default function InspectionForm() {
 
       {/* Voice recognition feedback */}
       {isListening && (
-        <div className="bg-purple-50 border-t border-purple-200 px-4 py-3">
+        <div className="bg-purple-50 border-t border-purple-200 px-4 md:px-8 py-3">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             <span className="text-sm font-medium text-purple-800">Listening...</span>
@@ -202,30 +204,32 @@ export default function InspectionForm() {
       )}
 
       {/* Submit area with voice button */}
-      <div className="p-4 bg-white border-t border-gray-200">
-        {isSupported && (
+      <div className="p-4 md:px-8 bg-white border-t border-gray-200">
+        <div className="md:max-w-4xl md:mx-auto md:flex md:gap-3 md:items-center">
+          {isSupported && (
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`w-full md:w-auto md:px-6 mb-3 md:mb-0 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                isListening
+                  ? 'bg-red-100 text-red-700 border border-red-300'
+                  : 'bg-purple-100 text-purple-700 border border-purple-300'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              {isListening ? 'Stop Voice Input' : 'Voice Input'}
+            </button>
+          )}
           <button
-            onClick={isListening ? stopListening : startListening}
-            className={`w-full mb-3 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-              isListening
-                ? 'bg-red-100 text-red-700 border border-red-300'
-                : 'bg-purple-100 text-purple-700 border border-purple-300'
+            onClick={() => setShowConfirm(true)}
+            className={`w-full md:flex-1 py-4 rounded-lg font-bold text-white ${
+              passed ? 'bg-green-600' : 'bg-red-600'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            {isListening ? 'Stop Voice Input' : 'Voice Input'}
+            Submit: {passed ? 'PASS' : 'FAIL'}
           </button>
-        )}
-        <button
-          onClick={() => setShowConfirm(true)}
-          className={`w-full py-4 rounded-lg font-bold text-white ${
-            passed ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
-          Submit: {passed ? 'PASS' : 'FAIL'}
-        </button>
+        </div>
       </div>
 
       {/* Confirmation modal */}
