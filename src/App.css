@@ -2,3 +2,133 @@
 #root {
   height: 100%;
 }
+
+/* ===== Visual Settings CSS ===== */
+
+/* Default visual settings variables */
+:root {
+  --vs-primary-hue: 217;
+  --vs-accent-hue: 262;
+  --vs-saturation: 70%;
+  --vs-brightness: 50%;
+  --vs-bg-tint: 0;
+  --vs-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vs-font-weight: 400;
+  --vs-letter-spacing: 0;
+  --vs-line-height: 1.5;
+  --vs-border-radius: 8px;
+  --vs-border-width: 1px;
+  --vs-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --vs-transition-duration: 200ms;
+  --vs-transition-timing: ease;
+  --vs-surface-blur: 0px;
+  --vs-spacing-scale: 1;
+  --vs-content-width: 1024px;
+  --vs-header-height: 56px;
+  --vs-pass-color: #16a34a;
+  --vs-fail-color: #dc2626;
+  --vs-warning-color: #f59e0b;
+}
+
+/* Apply transitions globally */
+*, *::before, *::after {
+  transition-duration: var(--vs-transition-duration);
+  transition-timing-function: var(--vs-transition-timing);
+}
+
+/* Glass effect */
+.vs-glass .bg-white {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(var(--vs-surface-blur));
+  -webkit-backdrop-filter: blur(var(--vs-surface-blur));
+}
+
+/* Gradient text on headings */
+.vs-gradient-text h1,
+.vs-gradient-text h2,
+.vs-gradient-text .font-bold {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--vs-primary-hue), var(--vs-saturation), var(--vs-brightness)),
+    hsl(var(--vs-accent-hue), var(--vs-saturation), var(--vs-brightness))
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Colored shadows */
+.vs-colored-shadows .shadow,
+.vs-colored-shadows .shadow-sm,
+.vs-colored-shadows .shadow-lg {
+  box-shadow: 0 4px 14px -3px hsla(var(--vs-primary-hue), var(--vs-saturation), var(--vs-brightness), 0.25) !important;
+}
+
+/* Animated background */
+.vs-animated-bg {
+  position: relative;
+}
+
+.vs-animated-bg .bg-gray-100 {
+  background: linear-gradient(
+    -45deg,
+    hsl(var(--vs-primary-hue), 15%, 95%),
+    hsl(var(--vs-accent-hue), 15%, 95%),
+    hsl(var(--vs-primary-hue), 10%, 97%),
+    hsl(var(--vs-accent-hue), 10%, 97%)
+  ) !important;
+  background-size: 400% 400% !important;
+  animation: vs-gradient-shift 15s ease infinite;
+}
+
+@keyframes vs-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Striped lists */
+.vs-striped-lists .divide-y > *:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: hsl(var(--vs-primary-hue), var(--vs-saturation), var(--vs-brightness));
+  margin-top: -6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: hsl(var(--vs-primary-hue), var(--vs-saturation), var(--vs-brightness));
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
