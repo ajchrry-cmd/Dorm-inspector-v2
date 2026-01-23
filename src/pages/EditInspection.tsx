@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
 import { useToast } from '../hooks/useToast';
 import type { AutoFailDemerit, RegularDemerit, Inspection } from '../types';
-import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types';
+import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculateResult } from '../types';
 import { format } from 'date-fns';
 
 export default function EditInspection() {
@@ -38,7 +38,7 @@ export default function EditInspection() {
     );
   }
 
-  const passed = calculatePassed(autoFailDemerits, regularDemerits);
+  const result = calculateResult(autoFailDemerits, regularDemerits);
 
   const toggleAutoFail = (demerit: AutoFailDemerit) => {
     if (!isEditing) return;
@@ -122,10 +122,10 @@ export default function EditInspection() {
       {/* Status banner */}
       <div
         className={`p-3 text-center font-bold text-white ${
-          passed ? 'bg-green-500' : 'bg-red-500'
+          result === 'outstanding' ? 'bg-yellow-500' : result === 'pass' ? 'bg-green-500' : 'bg-red-500'
         }`}
       >
-        {passed ? 'PASSED' : 'FAILED'}
+        {result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASSED' : 'FAILED'}
         {isEditing && ' (Editing)'}
       </div>
 

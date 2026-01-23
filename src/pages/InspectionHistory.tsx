@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { getInspectionResult } from '../types';
 import { format } from 'date-fns';
 
 export default function InspectionHistory() {
@@ -132,15 +133,18 @@ export default function InspectionHistory() {
                           {format(new Date(inspection.date), 'h:mm a')}
                         </span>
                       </div>
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded ${
-                          inspection.passed
-                            ? 'text-green-700 bg-green-100'
+                      {(() => {
+                        const r = getInspectionResult(inspection);
+                        return (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                            r === 'outstanding' ? 'text-yellow-700 bg-yellow-100'
+                            : r === 'pass' ? 'text-green-700 bg-green-100'
                             : 'text-red-700 bg-red-100'
-                        }`}
-                      >
-                        {inspection.passed ? 'PASS' : 'FAIL'}
-                      </span>
+                          }`}>
+                            {r === 'outstanding' ? 'OUTSTANDING' : r === 'pass' ? 'PASS' : 'FAIL'}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
                       <span>By: {inspection.inspectorName}</span>

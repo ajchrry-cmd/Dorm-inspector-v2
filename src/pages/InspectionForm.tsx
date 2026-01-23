@@ -4,7 +4,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useToast } from '../hooks/useToast';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import type { AutoFailDemerit, RegularDemerit } from '../types';
-import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed } from '../types';
+import { AUTO_FAIL_DEMERITS, REGULAR_DEMERITS, calculatePassed, calculateResult } from '../types';
 
 export default function InspectionForm() {
   const navigate = useNavigate();
@@ -48,6 +48,7 @@ export default function InspectionForm() {
 
   const room = parseInt(roomNumber, 10);
   const passed = calculatePassed(autoFailDemerits, regularDemerits);
+  const result = calculateResult(autoFailDemerits, regularDemerits);
 
   const toggleAutoFail = (demerit: AutoFailDemerit) => {
     setAutoFailDemerits((prev) =>
@@ -70,7 +71,8 @@ export default function InspectionForm() {
     if (activeRoomListId) {
       removeRoomFromList(activeRoomListId, room);
     }
-    showToast(`Room ${room} - ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
+    const resultLabel = result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASS' : 'FAIL';
+    showToast(`Room ${room} - ${resultLabel}`, passed ? 'success' : 'error');
     navigate('/dashboard');
   };
 
@@ -94,12 +96,12 @@ export default function InspectionForm() {
       {/* Status banner */}
       <div
         className={`p-3 text-center font-bold text-white ${
-          passed ? 'bg-green-500' : 'bg-red-500'
+          result === 'outstanding' ? 'bg-yellow-500' : result === 'pass' ? 'bg-green-500' : 'bg-red-500'
         }`}
       >
-        {passed ? 'PASSING' : 'FAILING'}
-        {!passed && autoFailDemerits.length > 0 && ' (Auto-Fail)'}
-        {!passed && autoFailDemerits.length === 0 && regularDemerits.length > 3 && ' (>3 Demerits)'}
+        {result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASSING' : 'FAILING'}
+        {result === 'fail' && autoFailDemerits.length > 0 && ' (Auto-Fail)'}
+        {result === 'fail' && autoFailDemerits.length === 0 && regularDemerits.length > 3 && ' (>3 Demerits)'}
       </div>
 
       {/* Form content */}
@@ -224,10 +226,10 @@ export default function InspectionForm() {
           <button
             onClick={() => setShowConfirm(true)}
             className={`w-full md:flex-1 py-4 rounded-lg font-bold text-white ${
-              passed ? 'bg-green-600' : 'bg-red-600'
+              result === 'outstanding' ? 'bg-yellow-500' : result === 'pass' ? 'bg-green-600' : 'bg-red-600'
             }`}
           >
-            Submit: {passed ? 'PASS' : 'FAIL'}
+            Submit: {result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASS' : 'FAIL'}
           </button>
         </div>
       </div>
@@ -239,8 +241,10 @@ export default function InspectionForm() {
             <h3 className="text-lg font-bold text-gray-800 mb-2">Confirm Inspection</h3>
             <p className="text-gray-600 mb-4">
               Room {room} will be marked as{' '}
-              <span className={passed ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                {passed ? 'PASS' : 'FAIL'}
+              <span className={`font-bold ${
+                result === 'outstanding' ? 'text-yellow-600' : result === 'pass' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASS' : 'FAIL'}
               </span>
             </p>
             {autoFailDemerits.length > 0 && (
@@ -263,7 +267,7 @@ export default function InspectionForm() {
               <button
                 onClick={handleSubmit}
                 className={`flex-1 py-3 rounded-lg font-bold text-white ${
-                  passed ? 'bg-green-600' : 'bg-red-600'
+                  result === 'outstanding' ? 'bg-yellow-500' : result === 'pass' ? 'bg-green-600' : 'bg-red-600'
                 }`}
               >
                 Confirm

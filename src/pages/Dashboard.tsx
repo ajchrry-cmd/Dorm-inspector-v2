@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
 import { useSettings } from '../hooks/useSettings';
+import { getInspectionResult } from '../types';
 import { useEffect, useState, useRef } from 'react';
 
 export default function Dashboard() {
@@ -237,15 +238,18 @@ export default function Dashboard() {
                   className={`w-full ${listPadding} text-left hover:bg-gray-50 active:bg-gray-100 flex items-center justify-between`}
                 >
                   <span className="font-medium text-gray-800">Room {inspection.roomNumber}</span>
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded ${
-                      inspection.passed
-                        ? 'text-green-700 bg-green-100'
+                  {(() => {
+                    const r = getInspectionResult(inspection);
+                    return (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                        r === 'outstanding' ? 'text-yellow-700 bg-yellow-100'
+                        : r === 'pass' ? 'text-green-700 bg-green-100'
                         : 'text-red-700 bg-red-100'
-                    }`}
-                  >
-                    {inspection.passed ? 'PASS' : 'FAIL'}
-                  </span>
+                      }`}>
+                        {r === 'outstanding' ? 'OUTSTANDING' : r === 'pass' ? 'PASS' : 'FAIL'}
+                      </span>
+                    );
+                  })()}
                 </button>
               ))}
             </div>
@@ -258,15 +262,18 @@ export default function Dashboard() {
                   className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-between"
                 >
                   <span className="font-medium text-gray-800 text-sm">Room {inspection.roomNumber}</span>
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded ${
-                      inspection.passed
-                        ? 'text-green-700 bg-green-100'
+                  {(() => {
+                    const r = getInspectionResult(inspection);
+                    return (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                        r === 'outstanding' ? 'text-yellow-700 bg-yellow-100'
+                        : r === 'pass' ? 'text-green-700 bg-green-100'
                         : 'text-red-700 bg-red-100'
-                    }`}
-                  >
-                    {inspection.passed ? 'PASS' : 'FAIL'}
-                  </span>
+                      }`}>
+                        {r === 'outstanding' ? 'OUTSTANDING' : r === 'pass' ? 'PASS' : 'FAIL'}
+                      </span>
+                    );
+                  })()}
                 </button>
               ))}
             </div>

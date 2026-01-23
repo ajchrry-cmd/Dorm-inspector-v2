@@ -89,6 +89,26 @@ export function calculatePassed(
   return true;
 }
 
+// Inspection result tiers
+export type InspectionResult = 'outstanding' | 'pass' | 'fail';
+
+export function calculateResult(
+  autoFailDemerits: AutoFailDemerit[],
+  regularDemerits: RegularDemerit[]
+): InspectionResult {
+  if (autoFailDemerits.length > 0) return 'fail';
+  if (regularDemerits.length > 3) return 'fail';
+  if (regularDemerits.length === 0) return 'outstanding';
+  return 'pass';
+}
+
+// Get result from a stored inspection record
+export function getInspectionResult(inspection: Inspection): InspectionResult {
+  if (!inspection.passed) return 'fail';
+  if (inspection.autoFailDemerits.length === 0 && inspection.regularDemerits.length === 0) return 'outstanding';
+  return 'pass';
+}
+
 // Generate unique ID
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
