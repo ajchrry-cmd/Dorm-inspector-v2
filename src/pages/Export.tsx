@@ -11,24 +11,25 @@ const C = {
   autoFailPale:    'FFFFCCCC', // soft pink — auto-fail column empty
   autoFailHit:     'FFCC0000', // dark red — auto-fail column with X
   regularPale:     'FFFFFDE7', // soft yellow — regular column empty
-  regularHit:      'FFFF8F00', // amber — regular column with X
-  outstandingBg:   'FFFFF9C4', // gold — outstanding result
+  regularHit:      'FFFFD600', // bright vivid yellow — regular column with X
+  outstandingBg:   'FF80CBC4', // teal blue — outstanding result
   passBg:          'FFE8F5E9', // mint — pass result
   failBg:          'FFFFEBEE', // blush — fail result
   headerMeta:      'FF1F497D', // navy — meta header cells
   headerAutoFail:  'FF8B0000', // dark red — auto-fail header cells
   headerRegular:   'FF7B6200', // dark amber — regular header cells
+  headerResult:    'FF1F497D', // navy — result header cell
   white:           'FFFFFFFF',
   black:           'FF000000',
 } as const;
 
 type BS = 'thin' | 'medium' | 'thick';
 
-function border(all: BS, overrides: { right?: BS; bottom?: BS } = {}): Partial<ExcelJS.Borders> {
+function border(all: BS, overrides: { right?: BS; bottom?: BS; left?: BS } = {}): Partial<ExcelJS.Borders> {
   const b = (s: BS) => ({ style: s as ExcelJS.BorderStyle, color: { argb: C.black } });
   return {
     top:    b(all),
-    left:   b(all),
+    left:   b(overrides.left ?? all),
     bottom: b(overrides.bottom ?? all),
     right:  b(overrides.right  ?? all),
   };
@@ -51,72 +52,110 @@ async function downloadBuffer(wb: ExcelJS.Workbook, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// Column layout:
+//   [left meta cols...] | [auto-fail demerits...] | [regular demerits...] | Result | (Notes)
+//
+// Detailed left meta: Room, Date, Time, Inspector
+// Summary  left meta: Room
+
 function applySheet(
   ws: ExcelJS.Worksheet,
-  metaHeaders: string[],
+  leftHeaders: string[],          // e.g. ['Room','Date','Time','Inspector']
+  hasNotes: boolean,
   dataRows: Inspection[],
-  buildMeta: (i: Inspection) => (string | number)[],
+  buildLeftMeta: (i: Inspection) => (string | number)[],
 ) {
   const nAF = AUTO_FAIL_DEMERITS.length;
   const allDemerits = [...AUTO_FAIL_DEMERITS, ...REGULAR_DEMERITS];
-  const nMeta = metaHeaders.length;
-  const notesCol = nMeta + allDemerits.length + 1;
-  const hasNotes = metaHeaders.includes('Room') && metaHeaders.length > 2; // detailed view
+  const nLeft = leftHeaders.length;
+  const demeritStart = nLeft + 1;            // 1-based col index of first demerit
+  const resultCol = nLeft + allDemerits.length + 1;
+  const notesCol = hasNotes ? resultCol + 1 : 0;
 
-  // Column widths
+  // ── Page setup for landscape printing ──────────────────────────────────────
+  ws.pageSetup = {
+    orientation: 'landscape',
+    paperSize: 1 as unknown as ExcelJS.PaperSize,  // Letter
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,          // as many pages tall as needed
+    horizontalCentered: true,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+  ws.properties.defaultRowHeight = 18;
+
+  // ── Column widths ──────────────────────────────────────────────────────────
   const colDefs: Partial<ExcelJS.Column>[] = [
-    ...metaHeaders.map((h) =>
-      h === 'Room' ? { width: 8 } :
-      h === 'Date' ? { width: 13 } :
-      h === 'Time' ? { width: 10 } :
+    ...leftHeaders.map((h) =>
+      h === 'Room'      ? { width: 8 } :
+      h === 'Date'      ? { width: 13 } :
+      h === 'Time'      ? { width: 10 } :
       h === 'Inspector' ? { width: 16 } :
-      { width: 11 } // Result
+      { width: 10 }
     ),
     ...AUTO_FAIL_DEMERITS.map(() => ({ width: 5 })),
     ...REGULAR_DEMERITS.map(() => ({ width: 5 })),
+    { width: 16 }, // Result — wide enough for OUTSTANDING
     ...(hasNotes ? [{ width: 32 }] : []),
   ];
   ws.columns = colDefs;
 
-  // ── Header row ──────────────────────────────────────────────────────────────
+  // ── Header row ─────────────────────────────────────────────────────────────
   const hRow = ws.getRow(1);
   hRow.height = 160;
 
-  metaHeaders.forEach((label, i) => {
+  // Left meta headers (Room, Date, Time, Inspector)
+  leftHeaders.forEach((label, i) => {
     const cell = hRow.getCell(i + 1);
     cell.value = label;
     cell.font = { bold: true, color: { argb: C.white }, size: 11 };
     cell.fill = solidFill(C.headerMeta);
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.alignment = { vertical: 'bottom', horizontal: 'center' };
     cell.border = border('thin', {
-      right: i === nMeta - 1 ? 'medium' : 'thin',
+      right: i === nLeft - 1 ? 'medium' : 'thin',
       bottom: 'medium',
     });
   });
 
+  // Demerit headers (rotated 90°)
   allDemerits.forEach((demerit, i) => {
     const isAF = i < nAF;
-    const cell = hRow.getCell(nMeta + i + 1);
+    const cell = hRow.getCell(demeritStart + i);
     cell.value = demerit;
     cell.font = { bold: true, color: { argb: C.white }, size: 10 };
     cell.fill = solidFill(isAF ? C.headerAutoFail : C.headerRegular);
     cell.alignment = { textRotation: 90, vertical: 'bottom', horizontal: 'center' };
+    const isLastAF = i === nAF - 1;
+    const isLastAll = i === allDemerits.length - 1;
     cell.border = border('thin', {
-      right: (i === nAF - 1 || i === allDemerits.length - 1) ? 'medium' : 'thin',
+      right: (isLastAF || isLastAll) ? 'medium' : 'thin',
       bottom: 'medium',
     });
   });
 
+  // Result header (after demerits)
+  const resultHeader = hRow.getCell(resultCol);
+  resultHeader.value = 'Result';
+  resultHeader.font = { bold: true, color: { argb: C.white }, size: 11 };
+  resultHeader.fill = solidFill(C.headerResult);
+  resultHeader.alignment = { vertical: 'bottom', horizontal: 'center' };
+  resultHeader.border = border('thin', {
+    left: 'medium',
+    right: hasNotes ? 'medium' : 'thin',
+    bottom: 'medium',
+  });
+
+  // Notes header
   if (hasNotes) {
     const nc = hRow.getCell(notesCol);
     nc.value = 'Notes';
     nc.font = { bold: true, color: { argb: C.white }, size: 11 };
     nc.fill = solidFill(C.headerMeta);
-    nc.alignment = { vertical: 'middle', horizontal: 'left' };
+    nc.alignment = { vertical: 'bottom', horizontal: 'left' };
     nc.border = border('thin', { bottom: 'medium' });
   }
 
-  // ── Data rows ────────────────────────────────────────────────────────────────
+  // ── Data rows ──────────────────────────────────────────────────────────────
   dataRows.forEach((insp, ri) => {
     const row = ws.getRow(ri + 2);
     const result = getInspectionResult(insp);
@@ -127,45 +166,48 @@ function applySheet(
       result === 'outstanding' ? 'OUTSTANDING' :
       result === 'pass'        ? 'PASS' : 'FAIL';
 
-    const metaValues = buildMeta(insp);
-    // replace last meta value (result) with styled label
-    const finalMeta = metaValues.map((v, i) =>
-      i === metaValues.length - 1 ? resultLabel : v
-    );
-
-    finalMeta.forEach((v, i) => {
+    // Left meta cells
+    const leftValues = buildLeftMeta(insp);
+    leftValues.forEach((v, i) => {
       const cell = row.getCell(i + 1);
       cell.value = v;
-      cell.alignment = {
-        vertical: 'middle',
-        horizontal: (i === 0 || i === finalMeta.length - 1) ? 'center' : 'left',
-      };
-      if (i === finalMeta.length - 1) {
-        // Result cell
-        cell.fill = solidFill(resultBg);
-        cell.font = { bold: true };
-      }
-      cell.border = border('thin', { right: i === nMeta - 1 ? 'medium' : 'thin' });
+      cell.alignment = { vertical: 'middle', horizontal: i === 0 ? 'center' : 'left' };
+      cell.border = border('thin', { right: i === nLeft - 1 ? 'medium' : 'thin' });
     });
 
+    // Demerit cells
     allDemerits.forEach((demerit, i) => {
       const isAF = i < nAF;
       const hasX = isAF
         ? insp.autoFailDemerits.includes(demerit as typeof AUTO_FAIL_DEMERITS[number])
         : insp.regularDemerits.includes(demerit as typeof REGULAR_DEMERITS[number]);
-      const cell = row.getCell(nMeta + i + 1);
+      const cell = row.getCell(demeritStart + i);
       cell.value = hasX ? 'X' : '';
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.font = { bold: hasX, color: { argb: hasX ? C.white : C.black } };
+      cell.font = { bold: hasX, color: { argb: hasX ? (isAF ? C.white : C.black) : C.black } };
       cell.fill = solidFill(hasX
         ? (isAF ? C.autoFailHit : C.regularHit)
         : (isAF ? C.autoFailPale : C.regularPale)
       );
+      const isLastAF = i === nAF - 1;
+      const isLastAll = i === allDemerits.length - 1;
       cell.border = border('thin', {
-        right: (i === nAF - 1 || i === allDemerits.length - 1) ? 'medium' : 'thin',
+        right: (isLastAF || isLastAll) ? 'medium' : 'thin',
       });
     });
 
+    // Result cell (after demerits)
+    const rc = row.getCell(resultCol);
+    rc.value = resultLabel;
+    rc.alignment = { vertical: 'middle', horizontal: 'center' };
+    rc.fill = solidFill(resultBg);
+    rc.font = { bold: true, color: { argb: result === 'outstanding' ? C.white : C.black } };
+    rc.border = border('thin', {
+      left: 'medium',
+      right: hasNotes ? 'medium' : 'thin',
+    });
+
+    // Notes cell
     if (hasNotes) {
       const nc = row.getCell(notesCol);
       nc.value = insp.notes;
@@ -330,7 +372,7 @@ export default function Export() {
   );
 }
 
-// ── Export helpers (defined outside component to avoid re-creation) ──────────
+// ── Export helpers ───────────────────────────────────────────────────────────
 
 async function exportDetailed(inspections: Inspection[], start: Date, end: Date) {
   const sorted = [...inspections].sort((a, b) => a.roomNumber - b.roomNumber);
@@ -340,14 +382,14 @@ async function exportDetailed(inspections: Inspection[], start: Date, end: Date)
 
   applySheet(
     ws,
-    ['Room', 'Date', 'Time', 'Inspector', 'Result'],
+    ['Room', 'Date', 'Time', 'Inspector'],
+    true,
     sorted,
     (i) => [
       i.roomNumber,
       format(new Date(i.date), 'MM/dd/yyyy'),
       format(new Date(i.date), 'h:mm a'),
       i.inspectorName,
-      '', // placeholder replaced inside applySheet
     ],
   );
 
@@ -355,7 +397,6 @@ async function exportDetailed(inspections: Inspection[], start: Date, end: Date)
 }
 
 async function exportSummary(inspections: Inspection[], start: Date, end: Date) {
-  // Keep only the most recent inspection per room
   const roomMap = new Map<number, Inspection>();
   [...inspections]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -368,9 +409,10 @@ async function exportSummary(inspections: Inspection[], start: Date, end: Date) 
 
   applySheet(
     ws,
-    ['Room', 'Result'],
+    ['Room'],
+    false,
     sorted,
-    (i) => [i.roomNumber, ''], // placeholder for result
+    (i) => [i.roomNumber],
   );
 
   await downloadBuffer(wb, `inspection_summary_${format(start, 'MMdd')}-${format(end, 'MMdd')}.xlsx`);
