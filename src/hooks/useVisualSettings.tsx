@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 export interface VisualSettings {
+  // Theme
+  darkMode: boolean;
+
   // Colors
   primaryHue: number;
   accentHue: number;
@@ -83,6 +86,8 @@ export interface VisualSettings {
 }
 
 export const defaultVisualSettings: VisualSettings = {
+  darkMode: false,
+
   primaryHue: 217,
   accentHue: 262,
   saturation: 70,
@@ -318,6 +323,7 @@ export function VisualSettingsProvider({ children }: { children: ReactNode }) {
 
     // Toggle classes
     const classToggles: [boolean, string][] = [
+      [visual.darkMode, 'dark'],
       [visual.glassEffect, 'vs-glass'],
       [visual.gradientText, 'vs-gradient-text'],
       [visual.coloredShadows, 'vs-colored-shadows'],
