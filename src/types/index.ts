@@ -20,6 +20,11 @@ export const REGULAR_DEMERITS = [
   'High dust or excessive clutter',
   'Trash in room',
   'Fridge freezer microwave',
+  'Shower Curtain',
+  'Bathtub / Shower',
+  'Excessive mold build-up',
+  'Toilet',
+  'Dirty bathroom tile, rugs, towels',
 ] as const;
 
 export type AutoFailDemerit = (typeof AUTO_FAIL_DEMERITS)[number];
