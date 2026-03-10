@@ -14,6 +14,7 @@ import Admin from './pages/Admin';
 import Settings from './pages/Settings';
 import VisualCustomization from './pages/VisualCustomization';
 import InspectorComparison from './pages/InspectorComparison';
+import Analytics from './pages/Analytics';
 import OfflineIndicator from './components/OfflineIndicator';
 import Layout from './components/Layout';
 import './App.css';
@@ -34,6 +35,7 @@ function App() {
                   <Route path="/history" element={<Layout><InspectionHistory /></Layout>} />
                   <Route path="/history/:id" element={<Layout hideNav><EditInspection /></Layout>} />
                   <Route path="/queue" element={<Layout><RoomQueue /></Layout>} />
+                  <Route path="/analytics" element={<Layout><Analytics /></Layout>} />
                   <Route path="/export" element={<Layout><Export /></Layout>} />
                   <Route path="/admin" element={<Layout hideNav><Admin /></Layout>} />
                   <Route path="/admin/compare" element={<Layout hideNav><InspectorComparison /></Layout>} />
