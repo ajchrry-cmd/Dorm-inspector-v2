@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useToast } from '../hooks/useToast';
 import { ALL_ROOMS } from '../types';
 import type { RoomList, RoomShift, RoomGender } from '../types';
+import ExcelJS from 'exceljs';
+
+interface ImportedRoom {
+  room: number;
+  shift?: RoomShift;
+  gender?: RoomGender;
+  valid: boolean;
+  error?: string;
+}
 
 // Shift badge colors
 const SHIFT_COLORS: Record<RoomShift, string> = {
@@ -42,6 +52,7 @@ export default function RoomQueue() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [editingRoom, setEditingRoom] = useState<number | null>(null);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const selectedList = roomLists.find((l) => l.id === selectedListId) || null;
   const queuedRooms = new Set(selectedList?.rooms || []);
@@ -181,8 +192,8 @@ export default function RoomQueue() {
           </button>
         </div>
 
-        {/* Bulk edit button */}
-        <div className="px-4 md:px-8 py-2 bg-gray-50 border-b border-gray-200">
+        {/* Bulk edit + Import buttons */}
+        <div className="px-4 md:px-8 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-4">
           <button
             onClick={() => setShowBulkEdit(true)}
             className="text-sm text-blue-600 font-medium flex items-center gap-1"
@@ -191,6 +202,15 @@ export default function RoomQueue() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
             Bulk Edit Properties
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="text-sm text-green-600 font-medium flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import Excel
           </button>
         </div>
 
@@ -262,6 +282,14 @@ export default function RoomQueue() {
               setShowBulkEdit(false);
             }}
             onClose={() => setShowBulkEdit(false)}
+          />
+        )}
+
+        {/* Import Excel modal */}
+        {showImport && (
+          <ImportExcelModal
+            listId={selectedListId!}
+            onClose={() => setShowImport(false)}
           />
         )}
 
@@ -637,6 +665,296 @@ function BulkEditModal({
             }`}
           >
             Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Import Excel modal component
+function ImportExcelModal({
+  listId,
+  onClose,
+}: {
+  listId: string;
+  onClose: () => void;
+}) {
+  const { addRoomToList, setRoomProperty } = useAppState();
+  const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importedData, setImportedData] = useState<ImportedRoom[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const validRooms = importedData.filter((r) => r.valid);
+  const invalidRooms = importedData.filter((r) => !r.valid);
+
+  const parseShift = (value: unknown): RoomShift | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const upper = value.trim().toUpperCase();
+    if (upper === 'S' || upper === 'T' || upper === 'R') return upper as RoomShift;
+    return undefined;
+  };
+
+  const parseGender = (value: unknown): RoomGender | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const lower = value.trim().toLowerCase();
+    if (lower === 'male' || lower === 'm') return 'Male';
+    if (lower === 'female' || lower === 'f') return 'Female';
+    return undefined;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setFileName(file.name);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        showToast('No worksheet found in the Excel file', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const rows: ImportedRoom[] = [];
+      let headerRow = 1;
+
+      // Find header row (look for "room" in first few rows)
+      for (let r = 1; r <= 5; r++) {
+        const cell = worksheet.getCell(r, 1).value?.toString().toLowerCase();
+        if (cell?.includes('room')) {
+          headerRow = r;
+          break;
+        }
+      }
+
+      // Parse data rows (skip header)
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= headerRow) return;
+
+        const roomVal = row.getCell(1).value;
+        const shiftVal = row.getCell(2).value;
+        const genderVal = row.getCell(3).value;
+
+        // Parse room number
+        let roomNum: number | null = null;
+        if (typeof roomVal === 'number') {
+          roomNum = roomVal;
+        } else if (typeof roomVal === 'string') {
+          const parsed = parseInt(roomVal.trim(), 10);
+          if (!isNaN(parsed)) roomNum = parsed;
+        }
+
+        // Validate room
+        if (!roomNum) {
+          if (roomVal) {
+            rows.push({ room: 0, valid: false, error: `Invalid room: "${roomVal}"` });
+          }
+          return;
+        }
+
+        if (!ALL_ROOMS.includes(roomNum)) {
+          rows.push({ room: roomNum, valid: false, error: `Room ${roomNum} not in valid range (201-299, 301-399)` });
+          return;
+        }
+
+        rows.push({
+          room: roomNum,
+          shift: parseShift(shiftVal),
+          gender: parseGender(genderVal),
+          valid: true,
+        });
+      });
+
+      setImportedData(rows);
+    } catch (err) {
+      console.error('Excel parse error:', err);
+      showToast('Failed to parse Excel file', 'error');
+    }
+
+    setLoading(false);
+  };
+
+  const handleImport = () => {
+    let addedCount = 0;
+    let propsCount = 0;
+
+    validRooms.forEach((r) => {
+      // Add room to list
+      addRoomToList(listId, r.room);
+      addedCount++;
+
+      // Set properties if provided
+      if (r.shift || r.gender) {
+        setRoomProperty(r.room, { shift: r.shift, gender: r.gender });
+        propsCount++;
+      }
+    });
+
+    showToast(`Imported ${addedCount} rooms, updated ${propsCount} properties`, 'success');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-hidden flex flex-col">
+        <h3 className="text-lg font-bold text-gray-800 mb-2">Import from Excel</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Upload an Excel file with columns: <strong>Room</strong>, <strong>Shift</strong> (S/T/R), <strong>Gender</strong> (Male/Female)
+        </p>
+
+        {/* File input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {!fileName ? (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center gap-2"
+          >
+            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="text-gray-600 font-medium">Click to upload Excel file</span>
+            <span className="text-xs text-gray-400">.xlsx or .xls</span>
+          </button>
+        ) : (
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* File info */}
+            <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700 truncate">{fileName}</span>
+              </div>
+              <button
+                onClick={() => {
+                  setFileName(null);
+                  setImportedData([]);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="text-gray-400 hover:text-red-500"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+              </div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="flex gap-3 mb-3">
+                  <div className="flex-1 p-2 bg-green-50 rounded text-center">
+                    <p className="text-lg font-bold text-green-700">{validRooms.length}</p>
+                    <p className="text-xs text-green-600">Valid rooms</p>
+                  </div>
+                  {invalidRooms.length > 0 && (
+                    <div className="flex-1 p-2 bg-red-50 rounded text-center">
+                      <p className="text-lg font-bold text-red-700">{invalidRooms.length}</p>
+                      <p className="text-xs text-red-600">Invalid rows</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview table */}
+                {validRooms.length > 0 && (
+                  <div className="flex-1 overflow-auto border border-gray-200 rounded mb-3">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="text-left p-2 font-medium text-gray-600">Room</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Shift</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Gender</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {validRooms.slice(0, 50).map((r, i) => (
+                          <tr key={i}>
+                            <td className="p-2 font-medium">{r.room}</td>
+                            <td className="p-2">
+                              {r.shift ? (
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold text-white ${SHIFT_COLORS[r.shift]}`}>
+                                  {r.shift}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {r.gender ? (
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium text-white ${GENDER_COLORS[r.gender]}`}>
+                                  {r.gender}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {validRooms.length > 50 && (
+                          <tr>
+                            <td colSpan={3} className="p-2 text-center text-gray-400 text-xs">
+                              +{validRooms.length - 50} more rows
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Errors */}
+                {invalidRooms.length > 0 && (
+                  <div className="mb-3 p-2 bg-red-50 rounded max-h-20 overflow-auto">
+                    <p className="text-xs font-medium text-red-700 mb-1">Errors:</p>
+                    {invalidRooms.map((r, i) => (
+                      <p key={i} className="text-xs text-red-600">{r.error}</p>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border border-gray-300 rounded-lg font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            disabled={validRooms.length === 0 || loading}
+            className={`flex-1 py-3 rounded-lg font-bold ${
+              validRooms.length > 0 && !loading
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Import {validRooms.length} Rooms
           </button>
         </div>
       </div>
