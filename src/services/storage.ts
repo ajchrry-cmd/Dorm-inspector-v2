@@ -4,6 +4,7 @@ import type {
   Inspection,
   RoomQueue,
   RoomList,
+  RoomProperties,
   AutoFailDemerit,
   RegularDemerit,
 } from '../types';
@@ -19,6 +20,7 @@ const defaultState: AppState = {
   roomLists: [],
   activeRoomListId: null,
   currentInspectorId: null,
+  roomProperties: {},
 };
 
 // Get full state from localStorage
@@ -204,6 +206,43 @@ export function removeRoomFromList(listId: string, room: number): void {
     list.rooms = list.rooms.filter((r) => r !== room);
     saveState(state);
   }
+}
+
+// Room properties operations
+export function getRoomProperties(): Record<number, RoomProperties> {
+  return getState().roomProperties || {};
+}
+
+export function getRoomProperty(roomNumber: number): RoomProperties {
+  const state = getState();
+  return state.roomProperties?.[roomNumber] || {};
+}
+
+export function setRoomProperty(roomNumber: number, properties: RoomProperties): void {
+  const state = getState();
+  if (!state.roomProperties) state.roomProperties = {};
+  state.roomProperties[roomNumber] = { ...state.roomProperties[roomNumber], ...properties };
+  saveState(state);
+}
+
+export function clearRoomProperty(roomNumber: number, property: 'shift' | 'gender'): void {
+  const state = getState();
+  if (state.roomProperties?.[roomNumber]) {
+    delete state.roomProperties[roomNumber][property];
+    if (Object.keys(state.roomProperties[roomNumber]).length === 0) {
+      delete state.roomProperties[roomNumber];
+    }
+    saveState(state);
+  }
+}
+
+export function bulkSetRoomProperties(rooms: number[], properties: RoomProperties): void {
+  const state = getState();
+  if (!state.roomProperties) state.roomProperties = {};
+  rooms.forEach((room) => {
+    state.roomProperties[room] = { ...state.roomProperties[room], ...properties };
+  });
+  saveState(state);
 }
 
 // Inspection operations

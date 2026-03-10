@@ -2,7 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
 import { ALL_ROOMS } from '../types';
-import type { RoomList } from '../types';
+import type { RoomList, RoomShift, RoomGender } from '../types';
+
+// Shift badge colors
+const SHIFT_COLORS: Record<RoomShift, string> = {
+  S: 'bg-yellow-500',
+  T: 'bg-purple-500',
+  R: 'bg-cyan-500',
+};
+
+// Gender indicator colors
+const GENDER_COLORS: Record<RoomGender, string> = {
+  Male: 'bg-blue-500',
+  Female: 'bg-pink-500',
+};
 
 export default function RoomQueue() {
   const navigate = useNavigate();
@@ -15,6 +28,9 @@ export default function RoomQueue() {
     deleteRoomList,
     addRoomToList,
     removeRoomFromList,
+    roomProperties,
+    setRoomProperty,
+    bulkSetRoomProperties,
   } = useAppState();
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
@@ -24,6 +40,8 @@ export default function RoomQueue() {
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [editingRoom, setEditingRoom] = useState<number | null>(null);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
 
   const selectedList = roomLists.find((l) => l.id === selectedListId) || null;
   const queuedRooms = new Set(selectedList?.rooms || []);
@@ -163,11 +181,25 @@ export default function RoomQueue() {
           </button>
         </div>
 
+        {/* Bulk edit button */}
+        <div className="px-4 md:px-8 py-2 bg-gray-50 border-b border-gray-200">
+          <button
+            onClick={() => setShowBulkEdit(true)}
+            className="text-sm text-blue-600 font-medium flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            Bulk Edit Properties
+          </button>
+        </div>
+
         {/* Room grid */}
         <div className="flex-1 p-4 pb-20 md:pb-6 md:px-8 overflow-auto">
           <div className="grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2 max-w-5xl mx-auto">
             {currentFloorRooms.map((room) => {
               const isQueued = queuedRooms.has(room);
+              const props = roomProperties[room];
               return (
                 <button
                   key={room}
@@ -176,18 +208,62 @@ export default function RoomQueue() {
                       ? removeRoomFromList(selectedListId!, room)
                       : addRoomToList(selectedListId!, room)
                   }
-                  className={`p-3 rounded text-sm font-medium transition-colors ${
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setEditingRoom(room);
+                  }}
+                  className={`relative p-3 rounded text-sm font-medium transition-colors ${
                     isQueued
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 border border-gray-200'
                   }`}
                 >
                   {room}
+                  {/* Property indicators */}
+                  {(props?.shift || props?.gender) && (
+                    <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+                      {props?.shift && (
+                        <span className={`w-3 h-3 rounded-full text-[8px] font-bold text-white flex items-center justify-center ${SHIFT_COLORS[props.shift]}`}>
+                          {props.shift}
+                        </span>
+                      )}
+                      {props?.gender && (
+                        <span className={`w-3 h-3 rounded-full ${GENDER_COLORS[props.gender]}`} title={props.gender} />
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}
           </div>
+          <p className="text-xs text-gray-400 text-center mt-4">Right-click a room to edit properties</p>
         </div>
+
+        {/* Room properties modal */}
+        {editingRoom && (
+          <RoomPropertiesModal
+            room={editingRoom}
+            properties={roomProperties[editingRoom] || {}}
+            onSave={(props) => {
+              setRoomProperty(editingRoom, props);
+              setEditingRoom(null);
+            }}
+            onClose={() => setEditingRoom(null)}
+          />
+        )}
+
+        {/* Bulk edit modal */}
+        {showBulkEdit && (
+          <BulkEditModal
+            rooms={currentFloorRooms}
+            queuedRooms={queuedRooms}
+            onApply={(rooms, props) => {
+              bulkSetRoomProperties(rooms, props);
+              setShowBulkEdit(false);
+            }}
+            onClose={() => setShowBulkEdit(false)}
+          />
+        )}
 
       </div>
     );
@@ -363,6 +439,207 @@ export default function RoomQueue() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+// Room properties modal component
+function RoomPropertiesModal({
+  room,
+  properties,
+  onSave,
+  onClose,
+}: {
+  room: number;
+  properties: { shift?: RoomShift; gender?: RoomGender };
+  onSave: (props: { shift?: RoomShift; gender?: RoomGender }) => void;
+  onClose: () => void;
+}) {
+  const [shift, setShift] = useState<RoomShift | undefined>(properties.shift);
+  const [gender, setGender] = useState<RoomGender | undefined>(properties.gender);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-sm p-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Room {room} Properties</h3>
+
+        {/* Shift */}
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 block mb-2">Shift</label>
+          <div className="flex gap-2">
+            {(['S', 'T', 'R'] as RoomShift[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setShift(shift === s ? undefined : s)}
+                className={`flex-1 py-2 rounded font-bold transition-colors ${
+                  shift === s
+                    ? `${SHIFT_COLORS[s]} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Gender */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700 block mb-2">Gender</label>
+          <div className="flex gap-2">
+            {(['Male', 'Female'] as RoomGender[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGender(gender === g ? undefined : g)}
+                className={`flex-1 py-2 rounded font-medium transition-colors ${
+                  gender === g
+                    ? `${GENDER_COLORS[g]} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border border-gray-300 rounded-lg font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave({ shift, gender })}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bulk edit modal component
+function BulkEditModal({
+  rooms,
+  queuedRooms,
+  onApply,
+  onClose,
+}: {
+  rooms: number[];
+  queuedRooms: Set<number>;
+  onApply: (rooms: number[], props: { shift?: RoomShift; gender?: RoomGender }) => void;
+  onClose: () => void;
+}) {
+  const [shift, setShift] = useState<RoomShift | undefined>();
+  const [gender, setGender] = useState<RoomGender | undefined>();
+  const [applyTo, setApplyTo] = useState<'all' | 'queued'>('all');
+
+  const targetRooms = applyTo === 'queued'
+    ? rooms.filter((r) => queuedRooms.has(r))
+    : rooms;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-sm p-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Bulk Edit Properties</h3>
+
+        {/* Apply to */}
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 block mb-2">Apply to</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setApplyTo('all')}
+              className={`flex-1 py-2 rounded font-medium transition-colors ${
+                applyTo === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              All on floor ({rooms.length})
+            </button>
+            <button
+              onClick={() => setApplyTo('queued')}
+              className={`flex-1 py-2 rounded font-medium transition-colors ${
+                applyTo === 'queued' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              Queued only ({[...queuedRooms].filter((r) => rooms.includes(r)).length})
+            </button>
+          </div>
+        </div>
+
+        {/* Shift */}
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 block mb-2">Set Shift</label>
+          <div className="flex gap-2">
+            {(['S', 'T', 'R'] as RoomShift[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setShift(shift === s ? undefined : s)}
+                className={`flex-1 py-2 rounded font-bold transition-colors ${
+                  shift === s
+                    ? `${SHIFT_COLORS[s]} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Gender */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700 block mb-2">Set Gender</label>
+          <div className="flex gap-2">
+            {(['Male', 'Female'] as RoomGender[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGender(gender === g ? undefined : g)}
+                className={`flex-1 py-2 rounded font-medium transition-colors ${
+                  gender === g
+                    ? `${GENDER_COLORS[g]} text-white`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mb-4">
+          Will update {targetRooms.length} rooms. Only selected properties will be changed.
+        </p>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border border-gray-300 rounded-lg font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (shift || gender) {
+                onApply(targetRooms, { shift, gender });
+              }
+            }}
+            disabled={!shift && !gender}
+            className={`flex-1 py-3 rounded-lg font-bold ${
+              shift || gender
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Apply
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

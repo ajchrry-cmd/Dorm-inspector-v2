@@ -68,6 +68,15 @@ export interface RoomList {
   createdAt: string;
 }
 
+// Room properties
+export type RoomShift = 'S' | 'T' | 'R';
+export type RoomGender = 'Male' | 'Female';
+
+export interface RoomProperties {
+  shift?: RoomShift;
+  gender?: RoomGender;
+}
+
 // App state stored in localStorage
 export interface AppState {
   inspectors: Inspector[];
@@ -76,6 +85,7 @@ export interface AppState {
   roomLists: RoomList[];
   activeRoomListId: string | null;
   currentInspectorId: string | null;
+  roomProperties: Record<number, RoomProperties>;
 }
 
 // Helper to generate all room numbers

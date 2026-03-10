@@ -4,6 +4,7 @@ import type {
   Inspection,
   RoomQueue,
   RoomList,
+  RoomProperties,
   AutoFailDemerit,
   RegularDemerit,
 } from '../types';
@@ -37,6 +38,12 @@ interface AppContextType {
   addRoomToList: (listId: string, room: number) => void;
   removeRoomFromList: (listId: string, room: number) => void;
 
+  // Room Properties
+  roomProperties: Record<number, RoomProperties>;
+  setRoomProperty: (roomNumber: number, properties: RoomProperties) => void;
+  clearRoomProperty: (roomNumber: number, property: 'shift' | 'gender') => void;
+  bulkSetRoomProperties: (rooms: number[], properties: RoomProperties) => void;
+
   // Inspections
   inspections: Inspection[];
   addInspection: (
@@ -66,6 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [roomLists, setRoomLists] = useState<RoomList[]>([]);
   const [activeRoomListId, setActiveRoomListIdState] = useState<string | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [roomProperties, setRoomPropertiesState] = useState<Record<number, RoomProperties>>({});
 
   const refreshState = useCallback(() => {
     setInspectors(storage.getInspectors());
@@ -74,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRoomLists(storage.getRoomLists());
     setActiveRoomListIdState(storage.getActiveRoomListId());
     setInspections(storage.getInspections());
+    setRoomPropertiesState(storage.getRoomProperties());
   }, []);
 
   useEffect(() => {
@@ -157,6 +166,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRoomLists(storage.getRoomLists());
   }, []);
 
+  // Room properties operations
+  const setRoomProperty = useCallback((roomNumber: number, properties: RoomProperties) => {
+    storage.setRoomProperty(roomNumber, properties);
+    setRoomPropertiesState(storage.getRoomProperties());
+  }, []);
+
+  const clearRoomProperty = useCallback((roomNumber: number, property: 'shift' | 'gender') => {
+    storage.clearRoomProperty(roomNumber, property);
+    setRoomPropertiesState(storage.getRoomProperties());
+  }, []);
+
+  const bulkSetRoomProperties = useCallback((rooms: number[], properties: RoomProperties) => {
+    storage.bulkSetRoomProperties(rooms, properties);
+    setRoomPropertiesState(storage.getRoomProperties());
+  }, []);
+
   const addInspection = useCallback(
     (
       roomNumber: number,
@@ -225,6 +250,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteRoomList,
         addRoomToList,
         removeRoomFromList,
+        roomProperties,
+        setRoomProperty,
+        clearRoomProperty,
+        bulkSetRoomProperties,
         inspections,
         addInspection,
         updateInspection,
