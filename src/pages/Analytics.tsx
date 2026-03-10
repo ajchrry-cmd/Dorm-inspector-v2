@@ -53,11 +53,19 @@ export default function Analytics() {
 
   // Inspector stats
   const inspectorStats = useMemo(() => {
-    const map: Record<string, { name: string; total: number; passed: number }> = {};
+    const map: Record<string, { name: string; total: number; outstanding: number; passed: number; failed: number }> = {};
     filteredInspections.forEach((i) => {
-      if (!map[i.inspectorId]) map[i.inspectorId] = { name: i.inspectorName, total: 0, passed: 0 };
+      if (!map[i.inspectorId]) {
+        map[i.inspectorId] = { name: i.inspectorName, total: 0, outstanding: 0, passed: 0, failed: 0 };
+      }
       map[i.inspectorId].total++;
-      if (i.passed) map[i.inspectorId].passed++;
+      if (!i.passed) {
+        map[i.inspectorId].failed++;
+      } else if (i.autoFailDemerits.length === 0 && i.regularDemerits.length === 0) {
+        map[i.inspectorId].outstanding++;
+      } else {
+        map[i.inspectorId].passed++;
+      }
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [filteredInspections]);
@@ -188,21 +196,34 @@ export default function Analytics() {
         {inspectorStats.length > 0 && (
           <div className="bg-white rounded-xl p-5 shadow-sm">
             <h2 className="font-semibold text-gray-800 mb-3">Inspectors</h2>
-            <div className="space-y-2">
+            <div className="space-y-4">
               {inspectorStats.map((s) => {
-                const rate = s.total > 0 ? Math.round((s.passed / s.total) * 100) : 0;
+                const outPct = s.total > 0 ? Math.round((s.outstanding / s.total) * 100) : 0;
+                const passPct = s.total > 0 ? Math.round((s.passed / s.total) * 100) : 0;
+                const failPct = s.total > 0 ? Math.round((s.failed / s.total) * 100) : 0;
                 return (
-                  <div key={s.name} className="flex items-center justify-between py-1">
-                    <span className="text-sm text-gray-700 truncate flex-1">{s.name}</span>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-gray-400">{s.total} done</span>
-                      <span
-                        className={`text-sm font-bold w-12 text-right ${
-                          rate >= 90 ? 'text-green-600' : rate >= 70 ? 'text-yellow-600' : 'text-red-600'
-                        }`}
-                      >
-                        {rate}%
-                      </span>
+                  <div key={s.name} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-800">{s.name}</span>
+                      <span className="text-xs text-gray-400">{s.total} inspections</span>
+                    </div>
+                    {/* Breakdown bar */}
+                    <div className="h-2 flex rounded-full overflow-hidden bg-gray-100 mb-2">
+                      {s.outstanding > 0 && (
+                        <div className="bg-yellow-400" style={{ width: `${outPct}%` }} />
+                      )}
+                      {s.passed > 0 && (
+                        <div className="bg-green-500" style={{ width: `${passPct}%` }} />
+                      )}
+                      {s.failed > 0 && (
+                        <div className="bg-red-500" style={{ width: `${failPct}%` }} />
+                      )}
+                    </div>
+                    {/* Percentage labels */}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-yellow-600">{outPct}% outstanding</span>
+                      <span className="text-green-600">{passPct}% pass</span>
+                      <span className="text-red-600">{failPct}% fail</span>
                     </div>
                   </div>
                 );
