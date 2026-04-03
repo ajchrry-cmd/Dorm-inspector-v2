@@ -93,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [roomProperties, setRoomPropertiesState] = useState<Record<number, RoomProperties>>({});
 
   // Cloud sync state
-  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
   const [isFirebaseReady] = useState(isFirebaseConfigured());
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

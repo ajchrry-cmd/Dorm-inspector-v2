@@ -13,7 +13,7 @@ const defaultSettings: AppSettings = {
   compactMode: false,
   highContrast: false,
   darkMode: false,
-  cloudSync: false,
+  cloudSync: true,
 };
 
 const SETTINGS_KEY = 'barracks-inspection-settings';
