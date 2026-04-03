@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import type {
   Inspector,
   Inspection,
@@ -7,9 +7,17 @@ import type {
   RoomProperties,
   AutoFailDemerit,
   RegularDemerit,
+  AppState,
 } from '../types';
 import * as storage from '../services/storage';
 import type { InspectorStats } from '../services/storage';
+import {
+  isFirebaseConfigured,
+  uploadToCloud,
+  downloadFromCloud,
+  subscribeToCloud,
+  unsubscribeFromCloud,
+} from '../services/firebase';
 
 interface AppContextType {
   // Inspectors
@@ -62,6 +70,15 @@ interface AppContextType {
 
   // Refresh state
   refreshState: () => void;
+
+  // Cloud sync
+  cloudSyncEnabled: boolean;
+  cloudSyncStatus: 'idle' | 'syncing' | 'error';
+  enableCloudSync: () => Promise<boolean>;
+  disableCloudSync: () => void;
+  syncToCloud: () => Promise<boolean>;
+  syncFromCloud: () => Promise<boolean>;
+  isFirebaseReady: boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -74,6 +91,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeRoomListId, setActiveRoomListIdState] = useState<string | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [roomProperties, setRoomPropertiesState] = useState<Record<number, RoomProperties>>({});
+
+  // Cloud sync state
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [isFirebaseReady] = useState(isFirebaseConfigured());
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshState = useCallback(() => {
     setInspectors(storage.getInspectors());
@@ -227,6 +250,94 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setInspections(storage.getInspections());
   }, []);
 
+  // Cloud sync functions
+  const syncToCloud = useCallback(async (): Promise<boolean> => {
+    if (!cloudSyncEnabled || !isFirebaseReady) return false;
+    setCloudSyncStatus('syncing');
+    try {
+      const state = storage.getFullState();
+      const success = await uploadToCloud(state);
+      setCloudSyncStatus(success ? 'idle' : 'error');
+      return success;
+    } catch {
+      setCloudSyncStatus('error');
+      return false;
+    }
+  }, [cloudSyncEnabled, isFirebaseReady]);
+
+  const syncFromCloud = useCallback(async (): Promise<boolean> => {
+    if (!isFirebaseReady) return false;
+    setCloudSyncStatus('syncing');
+    try {
+      const cloudState = await downloadFromCloud();
+      if (cloudState) {
+        storage.loadStateFromCloud(cloudState);
+        refreshState();
+        setCloudSyncStatus('idle');
+        return true;
+      }
+      setCloudSyncStatus('idle');
+      return false;
+    } catch {
+      setCloudSyncStatus('error');
+      return false;
+    }
+  }, [isFirebaseReady, refreshState]);
+
+  const enableCloudSync = useCallback(async (): Promise<boolean> => {
+    if (!isFirebaseReady) return false;
+
+    // First, download any existing cloud data
+    await syncFromCloud();
+
+    // Subscribe to real-time updates
+    subscribeToCloud((cloudState: AppState) => {
+      storage.loadStateFromCloud(cloudState);
+      refreshState();
+    });
+
+    setCloudSyncEnabled(true);
+    localStorage.setItem('cloud-sync-enabled', 'true');
+
+    // Upload current state to sync
+    await syncToCloud();
+
+    return true;
+  }, [isFirebaseReady, syncFromCloud, syncToCloud, refreshState]);
+
+  const disableCloudSync = useCallback(() => {
+    unsubscribeFromCloud();
+    setCloudSyncEnabled(false);
+    localStorage.removeItem('cloud-sync-enabled');
+  }, []);
+
+  // Auto-sync when data changes (debounced)
+  useEffect(() => {
+    if (!cloudSyncEnabled) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(() => {
+      syncToCloud();
+    }, 2000); // Debounce 2 seconds
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [inspectors, inspections, roomLists, roomProperties, cloudSyncEnabled, syncToCloud]);
+
+  // Restore cloud sync on mount
+  useEffect(() => {
+    const wasEnabled = localStorage.getItem('cloud-sync-enabled') === 'true';
+    if (wasEnabled && isFirebaseReady) {
+      enableCloudSync();
+    }
+  }, [isFirebaseReady, enableCloudSync]);
+
   return (
     <AppContext.Provider
       value={{
@@ -262,6 +373,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getInspectionsByDateRange,
         getInspectorStats,
         refreshState,
+        cloudSyncEnabled,
+        cloudSyncStatus,
+        enableCloudSync,
+        disableCloudSync,
+        syncToCloud,
+        syncFromCloud,
+        isFirebaseReady,
       }}
     >
       {children}

@@ -5,6 +5,7 @@ export interface AppSettings {
   compactMode: boolean;
   highContrast: boolean;
   darkMode: boolean;
+  cloudSync: boolean;
 }
 
 const defaultSettings: AppSettings = {
@@ -12,6 +13,7 @@ const defaultSettings: AppSettings = {
   compactMode: false,
   highContrast: false,
   darkMode: false,
+  cloudSync: false,
 };
 
 const SETTINGS_KEY = 'barracks-inspection-settings';

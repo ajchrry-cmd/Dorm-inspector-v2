@@ -1,9 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../hooks/useSettings';
+import { useAppState } from '../hooks/useAppState';
 
 export default function Settings() {
   const navigate = useNavigate();
   const { settings, updateSettings, resetSettings } = useSettings();
+  const {
+    cloudSyncEnabled,
+    cloudSyncStatus,
+    enableCloudSync,
+    disableCloudSync,
+    syncFromCloud,
+    isFirebaseReady,
+  } = useAppState();
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -124,6 +133,58 @@ export default function Settings() {
               />
             </button>
           </div>
+        </div>
+
+        {/* Cloud Sync */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-800">Cloud Sync</h2>
+              <p className="text-sm text-gray-500">
+                {isFirebaseReady
+                  ? 'Sync data across devices'
+                  : 'Configure Firebase in .env to enable'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {cloudSyncStatus === 'syncing' && (
+                <svg className="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              {cloudSyncStatus === 'error' && (
+                <span className="text-red-500 text-xs">Sync error</span>
+              )}
+              <button
+                onClick={() => {
+                  if (cloudSyncEnabled) {
+                    disableCloudSync();
+                  } else {
+                    enableCloudSync();
+                  }
+                }}
+                disabled={!isFirebaseReady}
+                className={`w-12 h-6 rounded-full transition-colors ${
+                  cloudSyncEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                } ${!isFirebaseReady ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                    cloudSyncEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+          {cloudSyncEnabled && (
+            <button
+              onClick={() => syncFromCloud()}
+              className="mt-3 w-full py-2 text-sm border border-blue-600 text-blue-600 rounded-lg"
+            >
+              Sync from Cloud Now
+            </button>
+          )}
         </div>
 
         {/* Preview */}

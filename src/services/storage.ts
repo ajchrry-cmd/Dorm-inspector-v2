@@ -405,3 +405,14 @@ export function getInspectorStats(inspectorId?: string): InspectorStats[] {
     };
   });
 }
+
+// Cloud sync functions
+export function loadStateFromCloud(cloudState: AppState): void {
+  // Merge cloud state with local, preferring cloud data
+  const state = { ...defaultState, ...cloudState };
+  saveState(state);
+}
+
+export function getFullState(): AppState {
+  return getState();
+}
