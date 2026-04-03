@@ -13,12 +13,13 @@ import type { AppState } from '../types';
 // Firebase configuration - Replace with your own values from Firebase Console
 // Go to: Firebase Console > Project Settings > Your apps > Web app > Config
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+    apiKey: "AIzaSyDwk8rfTyFYaQKqDcvKQuRaIzmgB2FSOtY",
+    authDomain: "dorm-inspector-v2.firebaseapp.com",
+    projectId: "dorm-inspector-v2",
+    storageBucket: "dorm-inspector-v2.firebasestorage.app",
+    messagingSenderId: "1052908831555",
+    appId: "1:1052908831555:web:72b751485f2c149707a5f6",
+    measurementId: "G-7ENRVWR5Z6"| '',
 };
 
 let app: FirebaseApp | null = null;
