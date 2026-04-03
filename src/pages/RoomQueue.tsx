@@ -713,71 +713,122 @@ function ImportExcelModal({
     setFileName(file.name);
 
     try {
-      const buffer = await file.arrayBuffer();
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(buffer);
-
-      const worksheet = workbook.worksheets[0];
-      if (!worksheet) {
-        showToast('No worksheet found in the Excel file', 'error');
-        setLoading(false);
-        return;
-      }
-
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
       const rows: ImportedRoom[] = [];
-      let headerRow = 1;
 
-      // Find header row (look for "room" in first few rows)
-      for (let r = 1; r <= 5; r++) {
-        const cell = worksheet.getCell(r, 1).value?.toString().toLowerCase();
-        if (cell?.includes('room')) {
-          headerRow = r;
-          break;
-        }
-      }
+      if (isCSV) {
+        // Parse CSV file
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
-      // Parse data rows (skip header)
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= headerRow) return;
-
-        const roomVal = row.getCell(1).value;
-        const shiftVal = row.getCell(2).value;
-        const genderVal = row.getCell(3).value;
-
-        // Parse room number
-        let roomNum: number | null = null;
-        if (typeof roomVal === 'number') {
-          roomNum = roomVal;
-        } else if (typeof roomVal === 'string') {
-          const parsed = parseInt(roomVal.trim(), 10);
-          if (!isNaN(parsed)) roomNum = parsed;
-        }
-
-        // Validate room
-        if (!roomNum) {
-          if (roomVal) {
-            rows.push({ room: 0, valid: false, error: `Invalid room: "${roomVal}"` });
+        let headerRow = 0;
+        // Find header row (look for "room" in first few rows)
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
+          if (lines[i].toLowerCase().includes('room')) {
+            headerRow = i;
+            break;
           }
+        }
+
+        // Parse data rows (skip header)
+        for (let i = headerRow + 1; i < lines.length; i++) {
+          const cells = lines[i].split(',').map((c) => c.trim());
+          const roomVal = cells[0];
+          const shiftVal = cells[1];
+          const genderVal = cells[2];
+
+          // Parse room number
+          let roomNum: number | null = null;
+          const parsed = parseInt(roomVal, 10);
+          if (!isNaN(parsed)) roomNum = parsed;
+
+          // Validate room
+          if (!roomNum) {
+            if (roomVal) {
+              rows.push({ room: 0, valid: false, error: `Invalid room: "${roomVal}"` });
+            }
+            continue;
+          }
+
+          if (!ALL_ROOMS.includes(roomNum)) {
+            rows.push({ room: roomNum, valid: false, error: `Room ${roomNum} not in valid range (201-299, 301-399)` });
+            continue;
+          }
+
+          rows.push({
+            room: roomNum,
+            shift: parseShift(shiftVal),
+            gender: parseGender(genderVal),
+            valid: true,
+          });
+        }
+      } else {
+        // Parse Excel file
+        const buffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          showToast('No worksheet found in the Excel file', 'error');
+          setLoading(false);
           return;
         }
 
-        if (!ALL_ROOMS.includes(roomNum)) {
-          rows.push({ room: roomNum, valid: false, error: `Room ${roomNum} not in valid range (201-299, 301-399)` });
-          return;
+        let headerRow = 1;
+
+        // Find header row (look for "room" in first few rows)
+        for (let r = 1; r <= 5; r++) {
+          const cell = worksheet.getCell(r, 1).value?.toString().toLowerCase();
+          if (cell?.includes('room')) {
+            headerRow = r;
+            break;
+          }
         }
 
-        rows.push({
-          room: roomNum,
-          shift: parseShift(shiftVal),
-          gender: parseGender(genderVal),
-          valid: true,
+        // Parse data rows (skip header)
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber <= headerRow) return;
+
+          const roomVal = row.getCell(1).value;
+          const shiftVal = row.getCell(2).value;
+          const genderVal = row.getCell(3).value;
+
+          // Parse room number
+          let roomNum: number | null = null;
+          if (typeof roomVal === 'number') {
+            roomNum = roomVal;
+          } else if (typeof roomVal === 'string') {
+            const parsed = parseInt(roomVal.trim(), 10);
+            if (!isNaN(parsed)) roomNum = parsed;
+          }
+
+          // Validate room
+          if (!roomNum) {
+            if (roomVal) {
+              rows.push({ room: 0, valid: false, error: `Invalid room: "${roomVal}"` });
+            }
+            return;
+          }
+
+          if (!ALL_ROOMS.includes(roomNum)) {
+            rows.push({ room: roomNum, valid: false, error: `Room ${roomNum} not in valid range (201-299, 301-399)` });
+            return;
+          }
+
+          rows.push({
+            room: roomNum,
+            shift: parseShift(shiftVal),
+            gender: parseGender(genderVal),
+            valid: true,
+          });
         });
-      });
+      }
 
       setImportedData(rows);
     } catch (err) {
-      console.error('Excel parse error:', err);
-      showToast('Failed to parse Excel file', 'error');
+      console.error('File parse error:', err);
+      showToast('Failed to parse file', 'error');
     }
 
     setLoading(false);
@@ -806,16 +857,16 @@ function ImportExcelModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-hidden flex flex-col">
-        <h3 className="text-lg font-bold text-gray-800 mb-2">Import from Excel</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">Import from File</h3>
         <p className="text-sm text-gray-500 mb-4">
-          Upload an Excel file with columns: <strong>Room</strong>, <strong>Shift</strong> (S/T/R), <strong>Gender</strong> (Male/Female)
+          Upload an Excel or CSV file with columns: <strong>Room</strong>, <strong>Shift</strong> (S/T/R), <strong>Gender</strong> (Male/Female)
         </p>
 
         {/* File input */}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.csv"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -829,8 +880,8 @@ function ImportExcelModal({
             <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span className="text-gray-600 font-medium">Click to upload Excel file</span>
-            <span className="text-xs text-gray-400">.xlsx or .xls</span>
+            <span className="text-gray-600 font-medium">Click to upload file</span>
+            <span className="text-xs text-gray-400">.xlsx, .xls, or .csv</span>
           </button>
         ) : (
           <div className="flex-1 overflow-hidden flex flex-col">
