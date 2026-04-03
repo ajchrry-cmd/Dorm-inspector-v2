@@ -19,7 +19,7 @@ const firebaseConfig = {
     storageBucket: "dorm-inspector-v2.firebasestorage.app",
     messagingSenderId: "1052908831555",
     appId: "1:1052908831555:web:72b751485f2c149707a5f6",
-    measurementId: "G-7ENRVWR5Z6"| '',
+    measurementId: "G-7ENRVWR5Z6",
 };
 
 let app: FirebaseApp | null = null;
