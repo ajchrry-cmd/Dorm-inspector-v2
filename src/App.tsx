@@ -16,6 +16,7 @@ import VisualCustomization from './pages/VisualCustomization';
 import InspectorComparison from './pages/InspectorComparison';
 import Analytics from './pages/Analytics';
 import OfflineIndicator from './components/OfflineIndicator';
+import SyncIndicator from './components/SyncIndicator';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -28,6 +29,7 @@ function App() {
             <HashRouter>
               <div className="min-h-full bg-gray-100">
                 <OfflineIndicator />
+                <SyncIndicator />
                 <Routes>
                   <Route path="/" element={<Layout hideNav><InspectorSelect /></Layout>} />
                   <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />

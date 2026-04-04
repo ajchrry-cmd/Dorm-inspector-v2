@@ -116,7 +116,7 @@ export async function downloadFromCloud(): Promise<AppState | null> {
 
 // Subscribe to real-time updates
 export function subscribeToCloud(
-  onUpdate: (state: AppState) => void
+  onUpdate: (state: AppState, fromDevice?: string) => void
 ): Unsubscribe | null {
   if (!db) {
     if (!initFirebase()) return null;
@@ -138,8 +138,8 @@ export function subscribeToCloud(
 
           // Don't trigger update if this device made the change
           if (lastUpdatedBy !== getDeviceId()) {
-            console.log('Received cloud update');
-            onUpdate(state as AppState);
+            console.log('Received cloud update from:', lastUpdatedBy);
+            onUpdate(state as AppState, lastUpdatedBy as string);
           }
         }
       },

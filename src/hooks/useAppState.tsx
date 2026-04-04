@@ -74,6 +74,7 @@ interface AppContextType {
   // Cloud sync
   cloudSyncEnabled: boolean;
   cloudSyncStatus: 'idle' | 'syncing' | 'error';
+  lastSyncedBy: string | null;
   enableCloudSync: () => Promise<boolean>;
   disableCloudSync: () => void;
   syncToCloud: () => Promise<boolean>;
@@ -95,6 +96,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Cloud sync state
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [lastSyncedBy, setLastSyncedBy] = useState<string | null>(null);
   const [isFirebaseReady] = useState(isFirebaseConfigured());
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -321,7 +323,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     syncTimeoutRef.current = setTimeout(() => {
       syncToCloud();
-    }, 2000); // Debounce 2 seconds
+    }, 500); // Debounce 500ms for faster multi-user sync
 
     return () => {
       if (syncTimeoutRef.current) {
@@ -330,13 +332,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [inspectors, inspections, roomLists, roomProperties, cloudSyncEnabled, syncToCloud]);
 
-  // Restore cloud sync on mount
+  // Restore cloud sync on mount (or enable by default)
   useEffect(() => {
-    const wasEnabled = localStorage.getItem('cloud-sync-enabled') === 'true';
-    if (wasEnabled && isFirebaseReady) {
-      enableCloudSync();
+    if (isFirebaseReady && cloudSyncEnabled) {
+      // Set up real-time subscription
+      subscribeToCloud((cloudState: AppState, fromDevice?: string) => {
+        storage.loadStateFromCloud(cloudState);
+        refreshState();
+        if (fromDevice) {
+          setLastSyncedBy(fromDevice);
+          // Clear the indicator after 3 seconds
+          setTimeout(() => setLastSyncedBy(null), 3000);
+        }
+      });
+
+      // Initial sync from cloud
+      syncFromCloud();
     }
-  }, [isFirebaseReady, enableCloudSync]);
+
+    return () => {
+      unsubscribeFromCloud();
+    };
+  }, [isFirebaseReady]); // Only run on mount
 
   return (
     <AppContext.Provider
@@ -375,6 +392,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshState,
         cloudSyncEnabled,
         cloudSyncStatus,
+        lastSyncedBy,
         enableCloudSync,
         disableCloudSync,
         syncToCloud,
