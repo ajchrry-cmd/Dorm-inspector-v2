@@ -408,11 +408,23 @@ export function getInspectorStats(inspectorId?: string): InspectorStats[] {
 
 // Cloud sync functions
 export function loadStateFromCloud(cloudState: AppState): void {
-  // Merge cloud state with local, preferring cloud data
-  const state = { ...defaultState, ...cloudState };
+  // Preserve local-only values (currentInspectorId should be per-device)
+  const localState = getState();
+  const state = {
+    ...defaultState,
+    ...cloudState,
+    currentInspectorId: localState.currentInspectorId, // Keep local inspector selection
+  };
   saveState(state);
 }
 
 export function getFullState(): AppState {
   return getState();
+}
+
+// Get state for cloud sync (excludes local-only values)
+export function getStateForCloud(): Omit<AppState, 'currentInspectorId'> {
+  const state = getState();
+  const { currentInspectorId, ...cloudState } = state;
+  return cloudState;
 }

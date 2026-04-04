@@ -258,8 +258,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!cloudSyncEnabled || !isFirebaseReady) return false;
     setCloudSyncStatus('syncing');
     try {
-      const state = storage.getFullState();
-      const success = await uploadToCloud(state);
+      const state = storage.getStateForCloud();
+      const success = await uploadToCloud(state as AppState);
       setCloudSyncStatus(success ? 'idle' : 'error');
       return success;
     } catch {
