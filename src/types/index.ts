@@ -69,7 +69,7 @@ export interface RoomList {
 }
 
 // Room properties
-export type RoomShift = 'S' | 'T' | 'R';
+export type RoomShift = 'S' | 'T' | 'R' | 'A';
 export type RoomGender = 'Male' | 'Female';
 
 export interface RoomProperties {

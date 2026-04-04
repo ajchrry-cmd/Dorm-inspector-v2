@@ -19,6 +19,7 @@ const SHIFT_COLORS: Record<RoomShift, string> = {
   S: 'bg-yellow-500',
   T: 'bg-purple-500',
   R: 'bg-cyan-500',
+  A: 'bg-green-500',
 };
 
 // Gender indicator colors
@@ -495,7 +496,7 @@ function RoomPropertiesModal({
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 block mb-2">Shift</label>
           <div className="flex gap-2">
-            {(['S', 'T', 'R'] as RoomShift[]).map((s) => (
+            {(['S', 'T', 'R', 'A'] as RoomShift[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setShift(shift === s ? undefined : s)}
@@ -603,7 +604,7 @@ function BulkEditModal({
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 block mb-2">Set Shift</label>
           <div className="flex gap-2">
-            {(['S', 'T', 'R'] as RoomShift[]).map((s) => (
+            {(['S', 'T', 'R', 'A'] as RoomShift[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setShift(shift === s ? undefined : s)}
@@ -693,15 +694,19 @@ function ImportExcelModal({
   const parseShift = (value: unknown): RoomShift | undefined => {
     if (typeof value !== 'string') return undefined;
     const upper = value.trim().toUpperCase();
-    if (upper === 'S' || upper === 'T' || upper === 'R') return upper as RoomShift;
+    // Handle "X-Shift" format
+    if (upper === 'S-SHIFT' || upper === 'S') return 'S';
+    if (upper === 'T-SHIFT' || upper === 'T') return 'T';
+    if (upper === 'R-SHIFT' || upper === 'R') return 'R';
+    if (upper === 'A-SHIFT' || upper === 'A') return 'A' as RoomShift;
     return undefined;
   };
 
   const parseGender = (value: unknown): RoomGender | undefined => {
     if (typeof value !== 'string') return undefined;
-    const lower = value.trim().toLowerCase();
-    if (lower === 'male' || lower === 'm') return 'Male';
-    if (lower === 'female' || lower === 'f') return 'Female';
+    const upper = value.trim().toUpperCase();
+    if (upper === 'M' || upper === 'MALE') return 'Male';
+    if (upper === 'F' || upper === 'FEMALE') return 'Female';
     return undefined;
   };
 
@@ -859,7 +864,7 @@ function ImportExcelModal({
       <div className="bg-white rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-hidden flex flex-col">
         <h3 className="text-lg font-bold text-gray-800 mb-2">Import from File</h3>
         <p className="text-sm text-gray-500 mb-4">
-          Upload an Excel or CSV file with columns: <strong>Room</strong>, <strong>Shift</strong> (S/T/R), <strong>Gender</strong> (Male/Female)
+          Upload an Excel or CSV file with columns: <strong>Room</strong>, <strong>Shift</strong> (S/T/R/A-Shift), <strong>Gender</strong> (M/F)
         </p>
 
         {/* File input */}
