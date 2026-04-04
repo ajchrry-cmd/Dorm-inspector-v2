@@ -4,7 +4,12 @@ import { formatDistanceToNow } from 'date-fns';
 export default function ActivityFeed() {
   const { activities, isReady } = useMultiUser();
 
-  if (!isReady || activities.length === 0) {
+  // Filter out claiming activities
+  const inspectionActivities = activities.filter(
+    (a) => a.type === 'started_inspection' || a.type === 'completed_inspection'
+  );
+
+  if (!isReady || inspectionActivities.length === 0) {
     return null;
   }
 
@@ -24,22 +29,6 @@ export default function ActivityFeed() {
           <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        );
-      case 'claimed_room':
-        return (
-          <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-          </div>
-        );
-      case 'unclaimed_room':
-        return (
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
         );
@@ -77,20 +66,6 @@ export default function ActivityFeed() {
             )}
           </>
         );
-      case 'claimed_room':
-        return (
-          <>
-            <span className="font-medium">{activity.inspectorName}</span> claimed{' '}
-            <span className="font-medium">Room {activity.roomNumber}</span>
-          </>
-        );
-      case 'unclaimed_room':
-        return (
-          <>
-            <span className="font-medium">{activity.inspectorName}</span> released{' '}
-            <span className="font-medium">Room {activity.roomNumber}</span>
-          </>
-        );
       default:
         return null;
     }
@@ -105,7 +80,7 @@ export default function ActivityFeed() {
         Recent Activity
       </h3>
       <div className="space-y-3 max-h-64 overflow-y-auto">
-        {activities.slice(0, 10).map((activity) => (
+        {inspectionActivities.slice(0, 10).map((activity) => (
           <div key={activity.id} className="flex items-start gap-3">
             {getActivityIcon(activity.type)}
             <div className="flex-1 min-w-0">

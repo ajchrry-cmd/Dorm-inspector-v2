@@ -14,10 +14,6 @@ export default function Dashboard() {
   const {
     isRoomBeingInspected,
     getActiveInspection,
-    isRoomClaimedByMe,
-    getClaimedRoom,
-    claim,
-    unclaim,
     startInspection,
     isReady: multiUserReady,
   } = useMultiUser();
@@ -203,8 +199,6 @@ export default function Dashboard() {
                 {roomsToInspect.slice(0, 10).map((room) => {
                   const isInspecting = isRoomBeingInspected(room);
                   const activeInspection = getActiveInspection(room);
-                  const claimed = getClaimedRoom(room);
-                  const claimedByMe = isRoomClaimedByMe(room);
 
                   const handleInspect = async () => {
                     if (multiUserReady) {
@@ -217,13 +211,7 @@ export default function Dashboard() {
                     <div
                       key={room}
                       className={`${listPadding} flex items-center justify-between ${
-                        isInspecting
-                          ? 'bg-orange-50'
-                          : claimed && !claimedByMe
-                          ? 'bg-yellow-50'
-                          : claimedByMe
-                          ? 'bg-green-50'
-                          : ''
+                        isInspecting ? 'bg-orange-50' : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -233,52 +221,19 @@ export default function Dashboard() {
                             {activeInspection?.inspectorName}
                           </span>
                         )}
-                        {claimed && !isInspecting && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${
-                            claimedByMe ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
-                          }`}>
-                            {claimedByMe ? 'Your claim' : claimed.inspectorName}
-                          </span>
-                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {multiUserReady && !isInspecting && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (claimedByMe) {
-                                unclaim(room);
-                              } else if (!claimed) {
-                                claim(room);
-                              }
-                            }}
-                            disabled={!!claimed && !claimedByMe}
-                            className={`text-xs px-2 py-1 rounded ${
-                              claimedByMe
-                                ? 'bg-gray-200 text-gray-600'
-                                : claimed
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-green-100 text-green-700'
-                            }`}
-                          >
-                            {claimedByMe ? 'Release' : claimed ? 'Claimed' : 'Claim'}
-                          </button>
-                        )}
-                        <button
-                          onClick={handleInspect}
-                          disabled={isInspecting || (!!claimed && !claimedByMe)}
-                          className={`text-sm font-medium flex items-center gap-1 ${
-                            isInspecting || (claimed && !claimedByMe)
-                              ? 'text-gray-400 cursor-not-allowed'
-                              : 'text-blue-600'
-                          }`}
-                        >
-                          Inspect
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
+                      <button
+                        onClick={handleInspect}
+                        disabled={isInspecting}
+                        className={`text-sm font-medium flex items-center gap-1 ${
+                          isInspecting ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600'
+                        }`}
+                      >
+                        Inspect
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   );
                 })}
@@ -294,8 +249,6 @@ export default function Dashboard() {
                   {roomsToInspect.map((room) => {
                     const isInspecting = isRoomBeingInspected(room);
                     const activeInspection = getActiveInspection(room);
-                    const claimed = getClaimedRoom(room);
-                    const claimedByMe = isRoomClaimedByMe(room);
 
                     const handleInspect = async () => {
                       if (multiUserReady) {
@@ -305,56 +258,23 @@ export default function Dashboard() {
                     };
 
                     return (
-                      <div key={room} className="relative">
-                        <button
-                          onClick={handleInspect}
-                          disabled={isInspecting || (!!claimed && !claimedByMe)}
-                          className={`w-full p-3 rounded-lg border transition-colors text-center ${
-                            isInspecting
-                              ? 'bg-orange-100 border-orange-300 cursor-not-allowed'
-                              : claimed && !claimedByMe
-                              ? 'bg-yellow-100 border-yellow-300 cursor-not-allowed'
-                              : claimedByMe
-                              ? 'bg-green-100 border-green-300 hover:bg-green-200'
-                              : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
-                          }`}
-                        >
-                          <span className="font-medium text-gray-800 text-sm">Room {room}</span>
-                          {(isInspecting || claimed) && (
-                            <div className="text-[10px] mt-1 truncate">
-                              {isInspecting
-                                ? <span className="text-orange-600">{activeInspection?.inspectorName}</span>
-                                : claimedByMe
-                                ? <span className="text-green-600">Your claim</span>
-                                : <span className="text-yellow-600">{claimed?.inspectorName}</span>
-                              }
-                            </div>
-                          )}
-                        </button>
-                        {multiUserReady && !isInspecting && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (claimedByMe) {
-                                unclaim(room);
-                              } else if (!claimed) {
-                                claim(room);
-                              }
-                            }}
-                            disabled={!!claimed && !claimedByMe}
-                            className={`absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
-                              claimedByMe
-                                ? 'bg-green-600 text-white hover:bg-red-500'
-                                : claimed
-                                ? 'bg-yellow-500 text-white cursor-not-allowed'
-                                : 'bg-gray-300 text-gray-600 hover:bg-green-500 hover:text-white'
-                            }`}
-                            title={claimedByMe ? 'Release claim' : claimed ? `Claimed by ${claimed.inspectorName}` : 'Claim this room'}
-                          >
-                            {claimedByMe ? '-' : claimed ? '!' : '+'}
-                          </button>
+                      <button
+                        key={room}
+                        onClick={handleInspect}
+                        disabled={isInspecting}
+                        className={`p-3 rounded-lg border transition-colors text-center ${
+                          isInspecting
+                            ? 'bg-orange-100 border-orange-300 cursor-not-allowed'
+                            : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                        }`}
+                      >
+                        <span className="font-medium text-gray-800 text-sm">Room {room}</span>
+                        {isInspecting && (
+                          <div className="text-[10px] mt-1 truncate text-orange-600">
+                            {activeInspection?.inspectorName}
+                          </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

@@ -48,10 +48,6 @@ export default function RoomQueue() {
   const {
     isRoomBeingInspected,
     getActiveInspection,
-    isRoomClaimedByMe,
-    getClaimedRoom,
-    claim,
-    unclaim,
     isReady: multiUserReady,
   } = useMultiUser();
 
@@ -234,8 +230,6 @@ export default function RoomQueue() {
               const props = roomProperties[room];
               const isInspecting = isRoomBeingInspected(room);
               const activeInspection = getActiveInspection(room);
-              const claimed = getClaimedRoom(room);
-              const claimedByMe = isRoomClaimedByMe(room);
 
               return (
                 <div key={room} className="relative">
@@ -252,10 +246,6 @@ export default function RoomQueue() {
                     className={`relative w-full p-3 rounded text-sm font-medium transition-colors ${
                       isInspecting
                         ? 'bg-orange-500 text-white ring-2 ring-orange-300 animate-pulse'
-                        : claimed
-                        ? claimedByMe
-                          ? 'bg-green-600 text-white'
-                          : 'bg-yellow-500 text-white'
                         : isQueued
                         ? 'bg-blue-600 text-white'
                         : 'bg-white text-gray-700 border border-gray-200'
@@ -276,50 +266,20 @@ export default function RoomQueue() {
                       </div>
                     )}
                   </button>
-                  {/* Status overlay */}
-                  {(isInspecting || claimed) && (
+                  {/* Status overlay for active inspection */}
+                  {isInspecting && (
                     <div className="absolute -bottom-1 left-0 right-0 text-center">
                       <span className="text-[8px] bg-black/70 text-white px-1 rounded truncate inline-block max-w-full">
-                        {isInspecting
-                          ? activeInspection?.inspectorName
-                          : claimed
-                          ? claimedByMe
-                            ? 'You'
-                            : claimed.inspectorName
-                          : ''}
+                        {activeInspection?.inspectorName}
                       </span>
                     </div>
-                  )}
-                  {/* Claim/unclaim button */}
-                  {multiUserReady && isQueued && !isInspecting && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (claimedByMe) {
-                          unclaim(room);
-                        } else if (!claimed) {
-                          claim(room);
-                        }
-                      }}
-                      className={`absolute -top-1 -left-1 w-4 h-4 rounded-full text-[8px] font-bold flex items-center justify-center ${
-                        claimedByMe
-                          ? 'bg-green-700 text-white'
-                          : claimed
-                          ? 'bg-yellow-600 text-white cursor-not-allowed'
-                          : 'bg-gray-400 text-white hover:bg-green-500'
-                      }`}
-                      title={claimedByMe ? 'Release claim' : claimed ? `Claimed by ${claimed.inspectorName}` : 'Claim this room'}
-                      disabled={!!claimed && !claimedByMe}
-                    >
-                      {claimedByMe ? '-' : claimed ? '!' : '+'}
-                    </button>
                   )}
                 </div>
               );
             })}
           </div>
           <p className="text-xs text-gray-400 text-center mt-4">
-            Right-click a room to edit properties. Click +/- to claim/release rooms.
+            Right-click a room to edit properties
           </p>
           {/* Legend */}
           {multiUserReady && (
@@ -328,13 +288,7 @@ export default function RoomQueue() {
                 <span className="w-3 h-3 rounded bg-blue-600"></span> In list
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded bg-green-600"></span> Your claim
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded bg-yellow-500"></span> Others' claim
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded bg-orange-500 animate-pulse"></span> Inspecting
+                <span className="w-3 h-3 rounded bg-orange-500 animate-pulse"></span> Being inspected
               </span>
             </div>
           )}

@@ -4,17 +4,13 @@ import {
   type OnlineUser,
   type ActiveInspection,
   type ActivityItem,
-  type ClaimedRoom,
   isFirebaseConfigured,
   setUserOnline,
   setUserOffline,
   startActiveInspection,
   endActiveInspection,
-  claimRoom,
-  unclaimRoom,
   subscribeToMultiUserState,
   unsubscribeFromMultiUserState,
-  getDeviceId,
 } from '../services/firebase';
 import { useAppState } from './useAppState';
 
@@ -32,14 +28,6 @@ interface MultiUserContextType {
   // Activity feed
   activities: ActivityItem[];
 
-  // Room claiming
-  claimedRooms: Record<number, ClaimedRoom>;
-  isRoomClaimed: (roomNumber: number) => boolean;
-  isRoomClaimedByMe: (roomNumber: number) => boolean;
-  getClaimedRoom: (roomNumber: number) => ClaimedRoom | null;
-  claim: (roomNumber: number) => Promise<boolean>;
-  unclaim: (roomNumber: number) => Promise<void>;
-
   // Status
   isReady: boolean;
 }
@@ -56,7 +44,6 @@ export function MultiUserProvider({ children }: { children: ReactNode }) {
   });
   const [isReady, setIsReady] = useState(false);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const deviceId = getDeviceId();
 
   // Subscribe to multi-user state
   useEffect(() => {
@@ -131,41 +118,6 @@ export function MultiUserProvider({ children }: { children: ReactNode }) {
     [currentInspector]
   );
 
-  // Room claiming helpers
-  const isRoomClaimed = useCallback(
-    (roomNumber: number) => !!multiUserState.claimedRooms[roomNumber],
-    [multiUserState.claimedRooms]
-  );
-
-  const isRoomClaimedByMe = useCallback(
-    (roomNumber: number) => {
-      const claim = multiUserState.claimedRooms[roomNumber];
-      return claim?.deviceId === deviceId;
-    },
-    [multiUserState.claimedRooms, deviceId]
-  );
-
-  const getClaimedRoom = useCallback(
-    (roomNumber: number) => multiUserState.claimedRooms[roomNumber] || null,
-    [multiUserState.claimedRooms]
-  );
-
-  const claim = useCallback(
-    async (roomNumber: number): Promise<boolean> => {
-      if (!currentInspector) return false;
-      return claimRoom(roomNumber, currentInspector.id, currentInspector.name);
-    },
-    [currentInspector]
-  );
-
-  const unclaim = useCallback(
-    async (roomNumber: number): Promise<void> => {
-      if (!currentInspector) return;
-      await unclaimRoom(roomNumber, currentInspector.name);
-    },
-    [currentInspector]
-  );
-
   return (
     <MultiUserContext.Provider
       value={{
@@ -176,12 +128,6 @@ export function MultiUserProvider({ children }: { children: ReactNode }) {
         startInspection,
         endInspection,
         activities: multiUserState.activities,
-        claimedRooms: multiUserState.claimedRooms,
-        isRoomClaimed,
-        isRoomClaimedByMe,
-        getClaimedRoom,
-        claim,
-        unclaim,
         isReady,
       }}
     >
