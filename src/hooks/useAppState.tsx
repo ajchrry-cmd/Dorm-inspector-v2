@@ -99,6 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastSyncedBy, setLastSyncedBy] = useState<string | null>(null);
   const [isFirebaseReady] = useState(isFirebaseConfigured());
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isReceivingFromCloud = useRef(false);
 
   const refreshState = useCallback(() => {
     setInspectors(storage.getInspectors());
@@ -313,9 +314,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('cloud-sync-enabled');
   }, []);
 
-  // Auto-sync when data changes (debounced)
+  // Auto-sync when data changes (debounced) - skip if change came from cloud
   useEffect(() => {
-    if (!cloudSyncEnabled) return;
+    if (!cloudSyncEnabled || isReceivingFromCloud.current) return;
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -337,8 +338,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (isFirebaseReady && cloudSyncEnabled) {
       // Set up real-time subscription
       subscribeToCloud((cloudState: AppState, fromDevice?: string) => {
+        // Mark that we're receiving from cloud to prevent sync loop
+        isReceivingFromCloud.current = true;
         storage.loadStateFromCloud(cloudState);
         refreshState();
+        // Clear the flag after a short delay to allow state to settle
+        setTimeout(() => {
+          isReceivingFromCloud.current = false;
+        }, 100);
+
         if (fromDevice) {
           setLastSyncedBy(fromDevice);
           // Clear the indicator after 3 seconds
@@ -347,7 +355,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       // Initial sync from cloud
-      syncFromCloud();
+      isReceivingFromCloud.current = true;
+      syncFromCloud().finally(() => {
+        setTimeout(() => {
+          isReceivingFromCloud.current = false;
+        }, 100);
+      });
     }
 
     return () => {
