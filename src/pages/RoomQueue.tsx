@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useMultiUser } from '../hooks/useMultiUser';
 import { useToast } from '../hooks/useToast';
 import { ALL_ROOMS } from '../types';
 import type { RoomList, RoomShift, RoomGender } from '../types';
@@ -43,6 +44,16 @@ export default function RoomQueue() {
     setRoomProperty,
     bulkSetRoomProperties,
   } = useAppState();
+
+  const {
+    isRoomBeingInspected,
+    getActiveInspection,
+    isRoomClaimedByMe,
+    getClaimedRoom,
+    claim,
+    unclaim,
+    isReady: multiUserReady,
+  } = useMultiUser();
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<2 | 3>(2);
@@ -221,43 +232,112 @@ export default function RoomQueue() {
             {currentFloorRooms.map((room) => {
               const isQueued = queuedRooms.has(room);
               const props = roomProperties[room];
+              const isInspecting = isRoomBeingInspected(room);
+              const activeInspection = getActiveInspection(room);
+              const claimed = getClaimedRoom(room);
+              const claimedByMe = isRoomClaimedByMe(room);
+
               return (
-                <button
-                  key={room}
-                  onClick={() =>
-                    isQueued
-                      ? removeRoomFromList(selectedListId!, room)
-                      : addRoomToList(selectedListId!, room)
-                  }
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setEditingRoom(room);
-                  }}
-                  className={`relative p-3 rounded text-sm font-medium transition-colors ${
-                    isQueued
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-200'
-                  }`}
-                >
-                  {room}
-                  {/* Property indicators */}
-                  {(props?.shift || props?.gender) && (
-                    <div className="absolute top-0.5 right-0.5 flex gap-0.5">
-                      {props?.shift && (
-                        <span className={`w-3 h-3 rounded-full text-[8px] font-bold text-white flex items-center justify-center ${SHIFT_COLORS[props.shift]}`}>
-                          {props.shift}
-                        </span>
-                      )}
-                      {props?.gender && (
-                        <span className={`w-3 h-3 rounded-full ${GENDER_COLORS[props.gender]}`} title={props.gender} />
-                      )}
+                <div key={room} className="relative">
+                  <button
+                    onClick={() =>
+                      isQueued
+                        ? removeRoomFromList(selectedListId!, room)
+                        : addRoomToList(selectedListId!, room)
+                    }
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setEditingRoom(room);
+                    }}
+                    className={`relative w-full p-3 rounded text-sm font-medium transition-colors ${
+                      isInspecting
+                        ? 'bg-orange-500 text-white ring-2 ring-orange-300 animate-pulse'
+                        : claimed
+                        ? claimedByMe
+                          ? 'bg-green-600 text-white'
+                          : 'bg-yellow-500 text-white'
+                        : isQueued
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-200'
+                    }`}
+                  >
+                    {room}
+                    {/* Property indicators */}
+                    {(props?.shift || props?.gender) && (
+                      <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+                        {props?.shift && (
+                          <span className={`w-3 h-3 rounded-full text-[8px] font-bold text-white flex items-center justify-center ${SHIFT_COLORS[props.shift]}`}>
+                            {props.shift}
+                          </span>
+                        )}
+                        {props?.gender && (
+                          <span className={`w-3 h-3 rounded-full ${GENDER_COLORS[props.gender]}`} title={props.gender} />
+                        )}
+                      </div>
+                    )}
+                  </button>
+                  {/* Status overlay */}
+                  {(isInspecting || claimed) && (
+                    <div className="absolute -bottom-1 left-0 right-0 text-center">
+                      <span className="text-[8px] bg-black/70 text-white px-1 rounded truncate inline-block max-w-full">
+                        {isInspecting
+                          ? activeInspection?.inspectorName
+                          : claimed
+                          ? claimedByMe
+                            ? 'You'
+                            : claimed.inspectorName
+                          : ''}
+                      </span>
                     </div>
                   )}
-                </button>
+                  {/* Claim/unclaim button */}
+                  {multiUserReady && isQueued && !isInspecting && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (claimedByMe) {
+                          unclaim(room);
+                        } else if (!claimed) {
+                          claim(room);
+                        }
+                      }}
+                      className={`absolute -top-1 -left-1 w-4 h-4 rounded-full text-[8px] font-bold flex items-center justify-center ${
+                        claimedByMe
+                          ? 'bg-green-700 text-white'
+                          : claimed
+                          ? 'bg-yellow-600 text-white cursor-not-allowed'
+                          : 'bg-gray-400 text-white hover:bg-green-500'
+                      }`}
+                      title={claimedByMe ? 'Release claim' : claimed ? `Claimed by ${claimed.inspectorName}` : 'Claim this room'}
+                      disabled={!!claimed && !claimedByMe}
+                    >
+                      {claimedByMe ? '-' : claimed ? '!' : '+'}
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
-          <p className="text-xs text-gray-400 text-center mt-4">Right-click a room to edit properties</p>
+          <p className="text-xs text-gray-400 text-center mt-4">
+            Right-click a room to edit properties. Click +/- to claim/release rooms.
+          </p>
+          {/* Legend */}
+          {multiUserReady && (
+            <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-blue-600"></span> In list
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-green-600"></span> Your claim
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-yellow-500"></span> Others' claim
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded bg-orange-500 animate-pulse"></span> Inspecting
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Room properties modal */}

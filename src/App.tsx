@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './hooks/useAppState';
+import { MultiUserProvider } from './hooks/useMultiUser';
 import { SettingsProvider } from './hooks/useSettings';
 import { VisualSettingsProvider } from './hooks/useVisualSettings';
 import { ToastProvider } from './hooks/useToast';
@@ -26,11 +27,12 @@ function App() {
       <SettingsProvider>
         <ToastProvider>
           <AppProvider>
-            <HashRouter>
-              <div className="min-h-full bg-gray-100">
-                <OfflineIndicator />
-                <SyncIndicator />
-                <Routes>
+            <MultiUserProvider>
+              <HashRouter>
+                <div className="min-h-full bg-gray-100">
+                  <OfflineIndicator />
+                  <SyncIndicator />
+                  <Routes>
                   <Route path="/" element={<Layout hideNav><InspectorSelect /></Layout>} />
                   <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
                   <Route path="/inspect/:roomNumber" element={<Layout hideNav><InspectionForm /></Layout>} />
@@ -45,8 +47,9 @@ function App() {
                   <Route path="/settings/visual" element={<Layout hideNav><VisualCustomization /></Layout>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-              </div>
-            </HashRouter>
+                </div>
+              </HashRouter>
+            </MultiUserProvider>
           </AppProvider>
         </ToastProvider>
       </SettingsProvider>

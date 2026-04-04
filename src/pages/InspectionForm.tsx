@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useMultiUser } from '../hooks/useMultiUser';
 import { useToast } from '../hooks/useToast';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import type { AutoFailDemerit, RegularDemerit } from '../types';
@@ -10,6 +11,7 @@ export default function InspectionForm() {
   const navigate = useNavigate();
   const { roomNumber } = useParams<{ roomNumber: string }>();
   const { currentInspector, addInspection, activeRoomListId, removeRoomFromList } = useAppState();
+  const { endInspection, isReady: multiUserReady } = useMultiUser();
   const { showToast } = useToast();
 
   const [autoFailDemerits, setAutoFailDemerits] = useState<AutoFailDemerit[]>([]);
@@ -66,10 +68,14 @@ export default function InspectionForm() {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     addInspection(room, autoFailDemerits, regularDemerits, notes);
     if (activeRoomListId) {
       removeRoomFromList(activeRoomListId, room);
+    }
+    // End the active inspection and log the result
+    if (multiUserReady) {
+      await endInspection(room, result);
     }
     const resultLabel = result === 'outstanding' ? 'OUTSTANDING' : result === 'pass' ? 'PASS' : 'FAIL';
     showToast(`Room ${room} - ${resultLabel}`, passed ? 'success' : 'error');
